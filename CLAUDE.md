@@ -326,3 +326,45 @@ This ensures all packages use local versions during development.
 - `@meetkey/browser-extension` depends on `@meetkey/shared`
 - `@meetkey/service` depends on `@meetkey/shared`
 - All packages use workspace protocol to reference each other
+
+## Monorepo 结构（2025-03-05 更新）
+
+现在项目是一个 pnpm monorepo，包含 4 个包：
+
+### 包结构
+
+```
+packages/
+├── shared/              # 共享库（类型、协议）
+├── plugin/              # Stream Deck 插件
+├── browser-extension/   # 浏览器插件 (WXT)
+└── service/             # 中心服务 (Tauri)
+```
+
+### 常用命令
+
+所有命令都在根目录运行：
+
+```bash
+pnpm dev                 # 并行启动所有包
+pnpm build              # 构建所有包
+pnpm format             # 格式化全部代码
+```
+
+### 单个包开发
+
+```bash
+cd packages/service
+pnpm dev                # 仅启动 service 包
+```
+
+### 内部依赖
+
+使用 workspace 协议引用：
+```json
+{
+  "dependencies": {
+    "@meetkey/shared": "workspace:*"
+  }
+}
+```
