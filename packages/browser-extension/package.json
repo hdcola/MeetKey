@@ -12,7 +12,7 @@
     "vue": "^3.4.21"
   },
   "devDependencies": {
-    "@wxt-dev/auto-icons": "^0.3.3",
+    "@wxt-dev/auto-icons": "^1.1.1",
     "wxt": "^0.20.4"
   }
 }
