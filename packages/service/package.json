@@ -1,0 +1,17 @@
+{
+  "name": "@meetkey/service",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "dependencies": {
+    "@meetkey/shared": "workspace:*",
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^1.5.0",
+    "@tauri-apps/api": "^1.5.0"
+  }
+}
