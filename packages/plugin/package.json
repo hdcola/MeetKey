@@ -6,6 +6,7 @@
     "build": "vite build && node ./script/autofile.cjs"
   },
   "dependencies": {
+    "@meetkey/shared": "workspace:*",
     "pinia": "^2.1.7",
     "vue": "^3.4.21"
   },
