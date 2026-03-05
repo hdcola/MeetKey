@@ -67,7 +67,9 @@ manifest.Software = Software;
 manifest.ApplicationsToMonitor = ApplicationsToMonitor
 fs.writeJSONSync('./dist/manifest.json', manifest, { spaces: 2, EOL: '\r\n' });
 
-// 复制到插件文件夹
-const PluginName = `${PUUID}.sdPlugin`;
-const PluginPath = path.join(process.env.APPDATA, 'HotSpot/StreamDock/plugins', PluginName);
-fs.removeSync(PluginPath) || fs.mkdirSync(PluginPath) || fs.copySync('./dist', PluginPath);
+// 复制到插件文件夹 (仅在 Windows 上执行)
+if (process.env.APPDATA) {
+  const PluginName = `${PUUID}.sdPlugin`;
+  const PluginPath = path.join(process.env.APPDATA, 'HotSpot/StreamDock/plugins', PluginName);
+  fs.removeSync(PluginPath) || fs.mkdirSync(PluginPath) || fs.copySync('./dist', PluginPath);
+}
