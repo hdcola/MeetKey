@@ -32,8 +32,14 @@ pnpm build
 # Format all code with Prettier
 pnpm format
 
+# Check code with ESLint
+pnpm lint
+
 # Install dependencies for entire monorepo
 pnpm install
+
+# Clean all node_modules, dist directories, and lock file
+pnpm clean
 ```
 
 **Single package development:**
@@ -43,6 +49,12 @@ pnpm dev
 
 cd packages/service
 pnpm dev
+```
+
+**Quick cleanup and reinstall:**
+```bash
+# Clean and reinstall everything
+pnpm clean && pnpm install
 ```
 
 **Note:** Package-level `dev` and `build` commands work the same as before. The plugin's `script/autofile.cjs` still generates `dist/manifest.json` and copies to StreamDock plugins directory.
@@ -327,44 +339,16 @@ This ensures all packages use local versions during development.
 - `@meetkey/service` depends on `@meetkey/shared`
 - All packages use workspace protocol to reference each other
 
-## Monorepo 结构（2025-03-05 更新）
+## Version Control & Environment
 
-现在项目是一个 pnpm monorepo，包含 4 个包：
+### .gitignore
+A comprehensive `.gitignore` is configured to exclude:
+- Dependencies: `node_modules/`, `.pnpm-store/`
+- Build outputs: `dist/`, `build/`, Rust `target/`
+- Environment: `.env`, `.env.local`
+- IDE: `.vscode/`, `.idea/`
+- OS files: `.DS_Store`, `Thumbs.db`
+- Temporary files: `*.swp`, `.cache/`, `.turbo/`
 
-### 包结构
-
-```
-packages/
-├── shared/              # 共享库（类型、协议）
-├── plugin/              # Stream Deck 插件
-├── browser-extension/   # 浏览器插件 (WXT)
-└── service/             # 中心服务 (Tauri)
-```
-
-### 常用命令
-
-所有命令都在根目录运行：
-
-```bash
-pnpm dev                 # 并行启动所有包
-pnpm build              # 构建所有包
-pnpm format             # 格式化全部代码
-```
-
-### 单个包开发
-
-```bash
-cd packages/service
-pnpm dev                # 仅启动 service 包
-```
-
-### 内部依赖
-
-使用 workspace 协议引用：
-```json
-{
-  "dependencies": {
-    "@meetkey/shared": "workspace:*"
-  }
-}
-```
+### pnpm-lock.yaml
+The lock file is committed to ensure consistent dependency versions across all team members.
