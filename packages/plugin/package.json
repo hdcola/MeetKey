@@ -1,10 +1,9 @@
 {
-  "name": "vue",
+  "name": "@meetkey/plugin",
   "type": "module",
   "scripts": {
     "dev": "node ./script/autofile.cjs dev && vite",
-    "build": "vite build && node ./script/autofile.cjs",
-    "format": "prettier . --write"
+    "build": "vite build && node ./script/autofile.cjs"
   },
   "dependencies": {
     "pinia": "^2.1.7",
