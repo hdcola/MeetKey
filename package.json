@@ -9,8 +9,7 @@
     "build": "pnpm -r build",
     "format": "prettier . --write",
     "lint": "eslint .",
-    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist pnpm-lock.yaml && echo '✅ Clean complete: removed node_modules, dist directories, and pnpm-lock.yaml'",
-    "install": "pnpm i"
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist pnpm-lock.yaml && echo '✅ Clean complete: removed node_modules, dist directories, and pnpm-lock.yaml'"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
