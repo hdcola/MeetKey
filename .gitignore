@@ -1,0 +1,67 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+pnpm-debug.log*
+
+# Build outputs
+dist/
+packages/*/dist/
+build/
+*.tsbuildinfo
+
+# Tauri specific
+packages/service/src-tauri/target/
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-workspace
+.project
+.settings/
+
+# OS files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Runtime files
+*.pid
+*.seed
+*.log
+
+# Temporary files
+*.tmp
+.cache/
+.turbo/
+
+# Browser extension specific
+packages/browser-extension/web-ext-artifacts/
+
+# Plugin installation directory (StreamDock)
+packages/plugin/dist/**/*.sdPlugin/
+
+# Rust build artifacts
+**/*.rs.bk
+**/*.pdb
+
+# Testing
+coverage/
+.nyc_output/
+
+# IDE specific
+.vscode/
+!.vscode/extensions.json
+.history/
