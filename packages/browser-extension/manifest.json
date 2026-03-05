@@ -1,0 +1,6 @@
+{
+  "manifest_version": 3,
+  "name": "MeetKey",
+  "version": "0.1.0",
+  "description": "Control Google Meet with one-click actions"
+}
