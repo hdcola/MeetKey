@@ -15,7 +15,8 @@
       "Bash(pnpm install:*)",
       "Bash(pgrep:*)",
       "Bash(pnpm build:*)",
-      "Bash(pnpm list:*)"
+      "Bash(pnpm list:*)",
+      "Bash(gh pr:*)"
     ]
   }
 }
