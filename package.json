@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm -r --parallel dev",
+    "dev:extension": "pnpm -C packages/browser-extension dev",
+    "dev:service": "pnpm -C packages/service dev",
     "build": "pnpm -r build",
     "format": "prettier . --write",
     "lint": "eslint .",
