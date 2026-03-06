@@ -2,13 +2,15 @@
  * WebSocket 消息类型定义
  */
 
+// 基础消息类型
 export type MessageType =
-  | 'ping'
-  | 'pong'
-  | 'action'
-  | 'event'
+  | 'command'
+  | 'state-update'
+  | 'state-query'
+  | 'state-response'
   | 'error'
-  | 'ack';
+  | 'ping'
+  | 'pong';
 
 export interface WebSocketMessage {
   id: string;
@@ -17,40 +19,54 @@ export interface WebSocketMessage {
   payload?: unknown;
 }
 
-export interface ActionMessage extends WebSocketMessage {
-  type: 'action';
+// MeetKey 特定类型
+export type MeetDeviceType = 'microphone' | 'camera';
+export type MeetDeviceState = 'on' | 'off' | 'unknown';
+export type MeetCommandAction = 'turn-on' | 'turn-off' | 'toggle';
+
+export interface MeetDeviceStatus {
+  microphone: MeetDeviceState;
+  camera: MeetDeviceState;
+  lastUpdated: number;
+}
+
+// Command Message - Plugin 或 Service 向 Extension 发送命令
+export interface CommandMessage extends WebSocketMessage {
+  type: 'command';
   payload: {
-    actionId: string;
-    params?: Record<string, unknown>;
+    device: MeetDeviceType;
+    action: MeetCommandAction;
   };
 }
 
-export interface EventMessage extends WebSocketMessage {
-  type: 'event';
+// State Update Message - Extension 向 Service 报告状态变化
+export interface StateUpdateMessage extends WebSocketMessage {
+  type: 'state-update';
+  payload: MeetDeviceStatus;
+}
+
+// State Query Message - Plugin 或其他客户端查询当前状态
+export interface StateQueryMessage extends WebSocketMessage {
+  type: 'state-query';
   payload: {
-    eventType: string;
-    data?: Record<string, unknown>;
+    requestId: string;
   };
 }
 
+// State Response Message - Service 回复当前状态
+export interface StateResponseMessage extends WebSocketMessage {
+  type: 'state-response';
+  payload: {
+    requestId: string;
+    state: MeetDeviceStatus;
+  };
+}
+
+// Error Message
 export interface ErrorMessage extends WebSocketMessage {
   type: 'error';
   payload: {
     code: string;
     message: string;
   };
-}
-
-// Google Meet 相关类型
-export interface MeetAction {
-  id: string;
-  name: string;
-  description: string;
-  category: 'audio' | 'video' | 'chat' | 'screen' | 'other';
-}
-
-export interface DeviceInfo {
-  id: string;
-  name: string;
-  platform: 'macos' | 'windows';
 }
