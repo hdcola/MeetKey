@@ -18,11 +18,11 @@ const isPressing = ref(false)
 
 const isCameraOn = computed(() => store.isCameraOn)
 
-async function handleClick() {
+function handleClick() {
   isPressing.value = true
   setTimeout(() => {
     isPressing.value = false
-  }, 100)
+  }, 150)
 
   // Send command to WebSocket
   wsService.toggleCamera()

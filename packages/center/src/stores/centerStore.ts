@@ -34,14 +34,6 @@ export const useCenterStore = defineStore('center', () => {
     browserConnection.value = status
   }
 
-  function toggleMicrophone() {
-    return microphone.value === 'on' ? 'off' : 'on'
-  }
-
-  function toggleCamera() {
-    return camera.value === 'on' ? 'off' : 'on'
-  }
-
   return {
     microphone,
     camera,
@@ -53,7 +45,5 @@ export const useCenterStore = defineStore('center', () => {
     setCameraState,
     setPluginConnection,
     setBrowserConnection,
-    toggleMicrophone,
-    toggleCamera,
   }
 })

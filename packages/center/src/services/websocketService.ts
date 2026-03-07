@@ -28,56 +28,68 @@ export class WebSocketService {
     this.reconnectAttempts = 0
     const store = useCenterStore()
     store.setBrowserConnection('connected')
-    // Send initial handshake
-    this.send({ type: 'init', client: 'center' })
+    // Send initial handshake with proper structure
+    this.send({
+      id: `init-${Date.now()}`,
+      type: 'init',
+      timestamp: Date.now(),
+      payload: { client: 'center' }
+    })
   }
 
   private handleMessage(event: MessageEvent) {
     const store = useCenterStore()
-    const message = JSON.parse(event.data)
+    
+    try {
+      const message = JSON.parse(event.data)
+      console.log('Received message:', message)
 
-    console.log('Received message:', message)
+      // Handle both 'type' (from frontend) and 'msg_type' (from backend)
+      const messageType = message.type || message.msg_type
 
-    switch (message.type) {
-      case 'state-update':
-        if (message.payload) {
-          const { microphone, camera } = message.payload
-          if (microphone !== undefined) {
-            store.setMicrophoneState(microphone === 'on' ? 'on' : 'off')
+      switch (messageType) {
+        case 'state-update':
+          if (message.payload) {
+            const { microphone, camera } = message.payload
+            if (microphone !== undefined) {
+              store.setMicrophoneState(microphone === 'on' ? 'on' : 'off')
+            }
+            if (camera !== undefined) {
+              store.setCameraState(camera === 'on' ? 'on' : 'off')
+            }
           }
-          if (camera !== undefined) {
-            store.setCameraState(camera === 'on' ? 'on' : 'off')
+          break
+
+        case 'state-response':
+          if (message.payload) {
+            const { microphone, camera } = message.payload
+            if (microphone !== undefined) {
+              store.setMicrophoneState(microphone === 'on' ? 'on' : 'off')
+            }
+            if (camera !== undefined) {
+              store.setCameraState(camera === 'on' ? 'on' : 'off')
+            }
           }
-        }
-        break
+          break
 
-      case 'state-response':
-        if (message.payload) {
-          const { microphone, camera } = message.payload
-          if (microphone !== undefined) {
-            store.setMicrophoneState(microphone === 'on' ? 'on' : 'off')
-          }
-          if (camera !== undefined) {
-            store.setCameraState(camera === 'on' ? 'on' : 'off')
-          }
-        }
-        break
+        case 'plugin-connected':
+          store.setPluginConnection('connected')
+          break
 
-      case 'plugin-connected':
-        store.setPluginConnection('connected')
-        break
+        case 'plugin-disconnected':
+          store.setPluginConnection('disconnected')
+          break
 
-      case 'plugin-disconnected':
-        store.setPluginConnection('disconnected')
-        break
+        case 'browser-connected':
+          store.setBrowserConnection('connected')
+          break
 
-      case 'browser-connected':
-        store.setBrowserConnection('connected')
-        break
-
-      case 'browser-disconnected':
-        store.setBrowserConnection('disconnected')
-        break
+        case 'browser-disconnected':
+          store.setBrowserConnection('disconnected')
+          break
+      }
+    } catch (error) {
+      console.error('Failed to parse WebSocket message:', event.data, error)
     }
   }
 
@@ -93,10 +105,16 @@ export class WebSocketService {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++
       setTimeout(() => this.connect(), 1000 * this.reconnectAttempts)
+    } else {
+      // Continue retrying with exponential backoff (max 30s interval)
+      const backoffMs = Math.min(30000, 1000 * Math.pow(2, this.reconnectAttempts - this.maxReconnectAttempts))
+      console.warn(`Max reconnection attempts reached. Retrying in ${backoffMs}ms`)
+      this.reconnectAttempts++
+      setTimeout(() => this.connect(), backoffMs)
     }
   }
 
-  send(message: any) {
+  send(message: Record<string, any>) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message))
     } else {
@@ -106,15 +124,19 @@ export class WebSocketService {
 
   toggleMicrophone() {
     this.send({
+      id: `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'action',
-      action: 'toggle-microphone',
+      timestamp: Date.now(),
+      payload: { action: 'toggle-microphone' }
     })
   }
 
   toggleCamera() {
     this.send({
+      id: `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'action',
-      action: 'toggle-camera',
+      timestamp: Date.now(),
+      payload: { action: 'toggle-camera' }
     })
   }
 

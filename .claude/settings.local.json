@@ -7,7 +7,8 @@
       "mcp__plugin_serena_serena__find_file",
       "mcp__plugin_serena_serena__create_text_file",
       "mcp__plugin_serena_serena__activate_project",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(pnpm list:*)"
     ]
   }
 }

@@ -1,17 +1,9 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
 import MicrophoneButton from '@/components/MicrophoneButton.vue'
 import CameraButton from '@/components/CameraButton.vue'
 import ConnectionStatus from '@/components/ConnectionStatus.vue'
-import { useCenterStore } from '@/stores/centerStore'
-import { wsService } from '@/services/websocketService'
+// WebSocket connection initialized in main.ts
 
-const store = useCenterStore()
-
-onMounted(() => {
-  // Connect to WebSocket
-  wsService.connect()
-})
 </script>
 
 <template>
