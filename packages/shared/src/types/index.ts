@@ -2,8 +2,12 @@
  * WebSocket 消息类型定义
  */
 
+// 客户端角色
+export type ClientRole = 'plugin' | 'extension';
+
 // 基础消息类型
 export type MessageType =
+  | 'register'
   | 'command'
   | 'state-update'
   | 'state-query'
@@ -19,6 +23,14 @@ export interface WebSocketMessage {
   payload?: unknown;
 }
 
+// Register Message - 客户端声明自己的角色
+export interface RegisterMessage extends WebSocketMessage {
+  type: 'register';
+  payload: {
+    role: ClientRole;
+  };
+}
+
 // MeetKey 特定类型
 export type MeetDeviceType = 'microphone' | 'camera';
 export type MeetDeviceState = 'on' | 'off' | 'unknown';
@@ -27,7 +39,7 @@ export type MeetCommandAction = 'turn-on' | 'turn-off' | 'toggle';
 export interface MeetDeviceStatus {
   microphone: MeetDeviceState;
   camera: MeetDeviceState;
-  lastUpdated: number;
+  last_updated: number;
 }
 
 // Command Message - Plugin 或 Service 向 Extension 发送命令

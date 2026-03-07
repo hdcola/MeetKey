@@ -4,11 +4,13 @@
 
 import type {
   WebSocketMessage,
+  RegisterMessage,
   CommandMessage,
   StateUpdateMessage,
   StateQueryMessage,
   StateResponseMessage,
   ErrorMessage,
+  ClientRole,
   MeetDeviceType,
   MeetCommandAction,
   MeetDeviceStatus,
@@ -20,6 +22,21 @@ import { v4 as uuidv4 } from 'uuid';
  * 消息构建器 - 创建规范的 WebSocket 消息
  */
 export class MessageBuilder {
+  /**
+   * 注册客户端角色
+   * @param role 客户端角色 ('plugin' | 'extension')
+   */
+  static createRegisterMessage(role: ClientRole): RegisterMessage {
+    return {
+      id: uuidv4(),
+      type: 'register',
+      timestamp: Date.now(),
+      payload: {
+        role,
+      },
+    };
+  }
+
   /**
    * 创建设备控制命令
    * @param device 设备类型 ('microphone' | 'camera')
@@ -132,4 +149,8 @@ export function isStateResponseMessage(msg: WebSocketMessage): msg is StateRespo
 
 export function isErrorMessage(msg: WebSocketMessage): msg is ErrorMessage {
   return msg.type === 'error' && !!msg.payload && typeof msg.payload === 'object';
+}
+
+export function isRegisterMessage(msg: WebSocketMessage): msg is RegisterMessage {
+  return msg.type === 'register' && !!msg.payload && typeof msg.payload === 'object';
 }
