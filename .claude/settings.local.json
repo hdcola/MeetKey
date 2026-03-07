@@ -3,7 +3,11 @@
     "allow": [
       "mcp__plugin_serena_serena__list_dir",
       "mcp__plugin_serena_serena__read_file",
-      "mcp__plugin_serena_serena__replace_content"
+      "mcp__plugin_serena_serena__replace_content",
+      "mcp__plugin_serena_serena__find_file",
+      "mcp__plugin_serena_serena__create_text_file",
+      "mcp__plugin_serena_serena__activate_project",
+      "Bash(git checkout:*)"
     ]
   }
 }

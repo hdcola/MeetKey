@@ -9,12 +9,27 @@
 ## 1. 产品概览
 
 **产品名：** MeetKey  
-**Tagline：** 一键控制 Google Meet —— 通过 Stream Dock 硬件或系统工具栏
+**Tagline：** 一键控制 Google Meet —— 通过 Stream Deck 硬件、全局热键或 MeetKey Center
 
 **核心价值：**
 
-- **Stream Dock 用户**：硬件快捷控制（类似 Elgato Zoom 插件）
-- **普通用户**：系统工具栏快速控制（无需硬件）
+- **Stream Deck 用户**：硬件快捷控制（类似 Elgato Zoom 插件）
+- **普通用户**：全局热键 + 系统工具栏快速控制（无需硬件）
+- **开发者**：通过 MeetKey Center UI 方便调试和测试
+
+---
+
+## 1.5 关键更新（2026-03-06）
+
+**架构重大变更：**
+
+1. ✨ **包重命名**：`@meetkey/service` → `@meetkey/center`
+2. ✨ **新功能**：全局热键绑定支持（在 MeetKey Center 实现）
+3. ✨ **增强用户体验**：支持三种控制方式
+   - 硬件按钮（Stream Deck Plugin）
+   - 全局热键（MeetKey Center - 系统级）
+   - UI 按钮（MeetKey Center UI）
+4. ✨ **开发友好**：无需硬件即可完整测试系统功能
 
 ---
 
@@ -22,20 +37,30 @@
 
 ### 用户群体
 
-1. **Stream Dock 硬件用户** - 专业主播、内容创作者、会议频繁的工作者
+1. **Stream Deck 硬件用户** - 专业主播、内容创作者、会议频繁的工作者
    - 希望一键快速控制 Google Meet（类似现有的 Zoom 插件）
    - 使用场景：直播、线上会议、远程教育
 
 2. **普通 Chrome 用户** - 所有使用 Google Meet 的人
-   - 希望在系统工具栏快速访问 Meet 控制
+   - 通过全局热键快速控制 Meet（无需打开 UI）
+   - 通过 MeetKey Center UI 快速调整设备状态
    - 使用场景：日常会议、快速调整设备状态
+
+3. **开发者 / 调试用户** - 参与项目开发的技术人员
+   - 通过 MeetKey Center UI 直观地测试和调试功能
+   - 无需硬件也能完整验证系统功能
+   - 使用场景：本地开发、功能测试、问题排查
 
 ### 核心操作场景
 
-- 快速静音/取消静音
-- 快速打开/关闭摄像头
-- 一键离开会议
-- 发送快速反应（emoji）
+**MVP 阶段：**
+- 快速静音/取消静音（热键或按钮）
+- 快速打开/关闭摄像头（热键或按钮）
+
+**支持三种控制方式：**
+1. **硬件按钮** - Stream Deck 按钮（需要硬件）
+2. **全局热键** - 系统级快捷键（Ctrl+Alt 组合）
+3. **UI 按钮** - MeetKey Center 应用界面
 
 ---
 
@@ -55,11 +80,12 @@
 - 📹 **关闭** - 静态图标，按下执行关闭
 - 📹 **切换** - 动态图标，显示当前状态，按下切换
 
-**支持的界面：**
+**支持的控制方式：**
 
-- Stream Dock 硬件按钮（Plugin）
-- macOS 系统工具栏（Service UI）
-- Windows 系统托盘（Service UI）
+- Stream Deck 硬件按钮（Plugin）
+- 系统全局热键（MeetKey Center）
+- macOS 系统工具栏（MeetKey Center UI）
+- Windows 系统托盘（MeetKey Center UI）
 
 ### 后续功能阶段（第二、三阶段）
 
@@ -75,6 +101,49 @@
 
 ### 4.1 整体架构图
 
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                      MeetKey 系统架构                              │
+└──────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────┐
+│  MeetKey Center (@meetkey/center)│  ← 改名自 @meetkey/service
+│  (Tauri - Rust 后端 + Vue UI)   │
+│                                 │
+│  核心职责：                     │
+│  • WebSocket 服务器             │
+│  • 中心状态管理                 │
+│  • 实时状态推送                 │
+│  • 全局热键绑定处理 ⭐          │
+│  • macOS 系统工具栏 UI          │
+│  • Windows 系统托盘 UI          │
+│  • 配置管理（端口、热键）      │
+└────────────────────────────────┘
+            │
+     ┌──────┼──────┐
+     │      │      │
+  WebSocket WebSocket WebSocket
+(客户端)  (客户端)  (客户端)
+     │      │      │
+     │      │      └─→ [Browser Extension]
+     │      │           ↓
+     │      │        [Google Meet]
+     │      │
+     │      └─→ [Stream Deck Plugin] 
+     │           ↓
+     │        [硬件按钮]
+     │
+     └─→ [macOS/Windows UI]
+         ↓
+      [UI 按钮]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+使用方式：
+
+1️⃣ 硬件用户:    Stream Deck 按钮 → Plugin → Center → Extension → Meet
+2️⃣ 普通用户:    热键 / UI 按钮 → Center → Extension → Meet
+3️⃣ 调试者:      UI 界面        → Center → Extension → Meet
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                       MeetKey 系统架构                       │
@@ -152,9 +221,9 @@
 | 包                             | 技术                           | 职责                                           |
 | ------------------------------ | ------------------------------ | ---------------------------------------------- |
 | **@meetkey/shared**            | TypeScript                     | 共享类型定义、WebSocket 协议、消息构建器       |
-| **@meetkey/plugin**            | Vue 3 + Vite + Stream Dock SDK | 处理硬件按钮事件，发送命令到服务               |
+| **@meetkey/plugin**            | Vue 3 + Vite + Stream Deck SDK | 处理硬件按钮事件，发送命令到 Center            |
 | **@meetkey/browser-extension** | Vue 3 + WXT                    | 注入脚本到 Google Meet，执行控制命令，同步状态 |
-| **@meetkey/service**           | Tauri (Rust + Vue 3)           | WebSocket 服务器、状态管理、系统 UI            |
+| **@meetkey/center**            | Tauri (Rust + Vue 3)           | WebSocket 服务器、全局热键处理、状态管理、系统 UI |
 
 ---
 
@@ -182,16 +251,27 @@
 
 ## 6. 关键设计决策
 
-### 6.1 为什么 Tauri Service 既是服务器又是 UI？
+### 6.1 为什么 MeetKey Center 是 Server + Client + UI 的结合体？
 
-**决策：** Service 本身提供 macOS 工具栏和 Windows 托盘 UI
+**决策：** Center 既是 WebSocket 服务器、状态中心，又是客户端，同时提供 UI 和全局热键处理
+
+**架构模式：**
+
+```
+MeetKey Center (Tauri App)
+├─ Rust 后端：WebSocket Server (接收其他客户端的连接)
+├─ Rust 后端：全局热键监听 (系统级快捷键注册)
+├─ Rust 后端：状态管理 (中心状态存储)
+└─ Vue 前端：UI 界面 (本地 client，可操作按钮)
+```
 
 **理由：**
 
-1. **职责清晰** - Service 是中心枢纽，提供 UI 是自然延伸
-2. **易于分层开发** - Browser Extension 保持专注（只控制 Meet），Service 负责用户交互和状态管理
-3. **易于 debug** - 各层可独立测试和改进
-4. **扩展灵活** - 后续可添加其他客户端（移动应用等），都通过 Service 通信
+1. **职责清晰** - Center 是中心枢纽，集中管理所有状态和交互入口
+2. **用户友好** - 无需硬件也能使用（热键 + UI）
+3. **开发友好** - 便于调试和测试，无需硬件即可完整验证功能
+4. **分层明确** - Browser Extension 专注 Meet 控制，Center 负责交互和状态管理
+5. **单一安装** - 一个应用安装即可，简化用户体验
 
 ### 6.2 为什么使用 WebSocket（方案 C）而不是 HTTP？
 
@@ -203,6 +283,23 @@
 2. **低延迟** - 用户体验更好
 3. **双向通信** - Plugin 既能发送命令，也能接收状态
 4. **扩展性** - 后续易于添加事件驱动功能
+
+### 6.2 全局热键绑定支持
+
+**决策：** Center 提供全局热键绑定功能，支持自定义快捷键
+
+**热键支持：**
+
+1. **预设热键** - 常见操作提供默认快捷键（如 Ctrl+Alt+M 切换麦克风）
+2. **自定义绑定** - 用户可通过 Center UI 自定义热键
+3. **系统级** - 即使 Meet 窗口不活跃也能触发（全局热键）
+4. **热键配置** - 保存在配置文件中，应用重启后保留
+
+**优势：**
+
+- 无需打开 UI 即可快速控制
+- 与硬件按钮体验一致
+- 支持无硬件用户
 
 ### 6.3 按钮设计（打开/关闭/切换）
 
@@ -220,13 +317,21 @@
 
 ### 7.1 用户配置项
 
-**Service 配置文件（JSON）：**
+**MeetKey Center 配置文件（JSON）：**
 
 ```json
 {
   "websocket": {
     "port": 8080,
     "host": "127.0.0.1"
+  },
+  "hotkeys": {
+    "toggle_microphone": "Ctrl+Alt+M",
+    "toggle_camera": "Ctrl+Alt+V",
+    "mute_microphone": "Ctrl+Alt+Shift+M",
+    "unmute_microphone": null,
+    "enable_camera": null,
+    "disable_camera": null
   },
   "autostart": {
     "enabled": false,
@@ -241,19 +346,26 @@
 
 **可配置项：**
 
-- WebSocket 端口（默认 8080，用户可自定义以避免冲突）
-- 开机自启（用户可选）
-- 语言和主题
+- **WebSocket 端口** - 默认 8080，用户可自定义以避免冲突
+- **全局热键** - 可自定义快捷键组合（`null` 表示禁用该快捷键）
+- **开机自启** - 用户可选
+- **语言和主题** - UI 外观配置
 
 ### 7.2 安装和启动
 
 **流程：**
 
 1. 用户从应用商店或官网下载 MeetKey
-2. 安装 Tauri Service（自动后台运行或用户手动启动）
+2. 安装 MeetKey Center（Tauri 应用，自动后台运行或用户手动启动）
+   - 自动注册全局热键
+   - 读取配置文件，应用用户自定义快捷键
 3. 安装 Browser Extension（Chrome Web Store）
 4. 可选：安装 Stream Deck Plugin（Stream Deck 应用市场）
-5. Service 自动检测 Extension 连接，建立通信
+5. Center 自动检测 Plugin 和 Extension 连接，建立通信
+
+**热键激活：**
+- Center 启动后自动注册全局热键
+- 用户在 Center UI 中修改热键配置后，自动更新系统热键注册
 
 ---
 
@@ -262,13 +374,20 @@
 ### 第一阶段：MVP 基座
 
 - **时间**：2-3 周
-- **目标**：完成基础框架和麦克风/摄像头控制
+- **目标**：完成基础框架和麦克风/摄像头控制（支持三种控制方式）
 - **任务**：
   1. 定义 WebSocket 通信协议（@meetkey/shared）
-  2. 开发 Tauri Service WebSocket 服务器
-  3. 开发 Browser Extension 控制脚本
-  4. 开发 Stream Deck Plugin 基础按钮
-  5. 整合和测试
+  2. 重命名 `@meetkey/service` → `@meetkey/center`
+  3. 开发 MeetKey Center Rust 后端：
+     - WebSocket 服务器
+     - 全局热键注册和处理 ⭐
+     - 状态管理和推送
+  4. 开发 MeetKey Center Vue 前端：
+     - 系统工具栏/托盘 UI
+     - 热键配置面板
+  5. 开发 Browser Extension 控制脚本
+  6. 开发 Stream Deck Plugin 基础按钮
+  7. 整合和测试（验证三种控制方式都正常工作）
 
 ### 第二阶段：完善和扩展
 
@@ -298,9 +417,11 @@
 
 ✅ **功能完整性**
 
-- 麦克风打开/关闭/切换按钮可用
-- 摄像头打开/关闭/切换按钮可用
-- 所有按钮都能正确控制 Google Meet
+- 麦克风打开/关闭/切换（UI 按钮）可用
+- 摄像头打开/关闭/切换（UI 按钮）可用
+- 全局热键可正确触发控制命令 ⭐
+- 热键配置面板可自定义快捷键
+- 所有方式都能正确控制 Google Meet
 
 ✅ **状态同步**
 
@@ -311,13 +432,16 @@
 ✅ **跨平台支持**
 
 - Windows 和 macOS 均可运行
+- 全局热键在两个平台都正常工作 ⭐
 - Chrome 浏览器扩展正常工作
 
 ✅ **用户体验**
 
-- Stream Dock 硬件按钮响应迅速
+- Stream Deck 硬件按钮响应迅速
+- 全局热键响应迅速（无需打开 UI）⭐
 - 系统工具栏/托盘 UI 直观易用
-- 无需复杂配置即可使用
+- 无硬件用户可通过热键或 UI 完整使用所有功能 ⭐
+- 无需复杂配置即可使用（预设热键开箱即用）
 
 ✅ **国际化**
 
@@ -381,7 +505,7 @@
 
 | 角色        | 日期       | 意见      |
 | ----------- | ---------- | --------- |
-| 用户        | 2026-03-05 | ✅ 已批准 |
-| Claude Code | 2026-03-05 | ✅ 已批准 |
+| 用户        | 2026-03-06 | ✅ 已批准（添加热键绑定功能） |
+| Claude Code | 2026-03-06 | ✅ 已批准 |
 
 ---

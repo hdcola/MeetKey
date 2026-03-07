@@ -8,18 +8,18 @@
     "active": true,
     "targets": "all"
   },
-  "productName": "meetkey-service",
-  "mainBinaryName": "meetkey-service",
+  "productName": "meetkey-center",
+  "mainBinaryName": "meetkey-center",
   "version": "0.1.0",
-  "identifier": "com.meetkey.service",
+  "identifier": "com.meetkey.center",
   "plugins": {},
   "app": {
     "windows": [
       {
-        "title": "MeetKey Service",
-        "width": 800,
-        "height": 600,
-        "resizable": true,
+        "title": "MeetKey Center",
+        "width": 300,
+        "height": 150,
+        "resizable": false,
         "fullscreen": false,
         "useHttpsScheme": true
       }

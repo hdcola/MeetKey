@@ -1,5 +1,5 @@
 {
-  "name": "@meetkey/service",
+  "name": "@meetkey/center",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@meetkey/shared": "workspace:*",
+    "pinia": "^3.0.4",
     "vue": "^3.5.29"
   },
   "devDependencies": {

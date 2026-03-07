@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "dev:extension": "pnpm -C packages/browser-extension dev",
-    "dev:service": "pnpm -C packages/service dev",
+    "dev:center": "pnpm -C packages/center dev",
     "build": "pnpm -r build",
     "format": "prettier . --write",
     "lint": "eslint .",
