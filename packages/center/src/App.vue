@@ -30,35 +30,35 @@ import ConnectionStatus from '@/components/ConnectionStatus.vue'
   flex-direction: column;
   height: 100vh;
   width: 100%;
-  padding: 10px;
+  padding: 12px 14px;
   background: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue',
     sans-serif;
-  box-shadow: inset 0 0 0 1px #e5e7eb;
 }
 
 .header {
   flex-shrink: 0;
-  padding: 0 0 4px 0;
+  padding: 0 0 8px 0;
   user-select: none;
   -webkit-user-select: none;
 }
 
 .header h1 {
   margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-  letter-spacing: 0.5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4b5563;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
 }
 
 .buttons-container {
   display: flex;
-  gap: 10px;
+  gap: 14px;
   justify-content: center;
   align-items: center;
   flex: 1;
   min-height: 0;
+  padding: 4px 0;
 }
 </style>

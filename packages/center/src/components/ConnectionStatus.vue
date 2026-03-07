@@ -51,8 +51,8 @@ const pluginStatusClass = computed(() => {
 .connection-status {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  padding: 6px 0 0 0;
+  gap: 16px;
+  padding: 8px 0 0 0;
   border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
@@ -60,12 +60,13 @@ const pluginStatusClass = computed(() => {
 .status-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  font-size: 13px;
 }
 
 .icon {
-  font-size: 14px;
-  opacity: 0.8;
+  font-size: 15px;
+  opacity: 0.75;
 }
 
 .dot {
