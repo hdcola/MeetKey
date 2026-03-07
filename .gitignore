@@ -65,3 +65,6 @@ coverage/
 .vscode/
 !.vscode/extensions.json
 .history/
+
+
+settings.local.json
