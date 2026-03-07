@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
+    "dev-frontend": "vite",
     "build-frontend": "vite build",
     "build": "tauri build"
   },
