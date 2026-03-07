@@ -8,7 +8,8 @@
       "mcp__plugin_serena_serena__create_text_file",
       "mcp__plugin_serena_serena__activate_project",
       "Bash(git checkout:*)",
-      "Bash(pnpm list:*)"
+      "Bash(pnpm list:*)",
+      "mcp__plugin_serena_serena__replace_symbol_body"
     ]
   }
 }
