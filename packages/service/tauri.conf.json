@@ -1,6 +1,6 @@
 {
   "build": {
-    "beforeDevCommand": "pnpm dev-build",
+    "beforeDevCommand": "pnpm build-frontend",
     "beforeBuildCommand": "pnpm build-frontend",
     "devUrl": "http://localhost:5173"
   },
