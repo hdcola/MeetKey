@@ -1,0 +1,31 @@
+{
+  "build": {
+    "beforeDevCommand": "pnpm dev-frontend",
+    "beforeBuildCommand": "pnpm build-frontend",
+    "devUrl": "http://localhost:5173"
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  },
+  "productName": "meetkey-service",
+  "mainBinaryName": "meetkey-service",
+  "version": "0.1.0",
+  "identifier": "com.meetkey.service",
+  "plugins": {},
+  "app": {
+    "windows": [
+      {
+        "title": "MeetKey Service",
+        "width": 800,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "useHttpsScheme": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

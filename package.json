@@ -14,8 +14,8 @@
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist pnpm-lock.yaml && echo '✅ Clean complete: removed node_modules, dist directories, and pnpm-lock.yaml'"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
-    "prettier": "^3.2.5",
-    "typescript": "^5.3.3"
+    "eslint": "^8.57.1",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3"
   }
 }

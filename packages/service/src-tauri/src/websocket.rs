@@ -2,8 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
-use tokio_tungstenite::accept_async;
+use tokio_tungstenite::{accept_async, tungstenite};
 use futures::stream::StreamExt;
+use futures::SinkExt;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeetDeviceStatus {
@@ -110,9 +111,22 @@ async fn handle_connection(
                             }
                         }
                     }
+                    Some(Ok(tungstenite::Message::Binary(_))) => {
+                        // Handle binary messages if needed
+                    }
+                    Some(Ok(tungstenite::Message::Ping(data))) => {
+                        // Respond to ping with pong
+                        let _ = write.send(tungstenite::Message::Pong(data)).await;
+                    }
+                    Some(Ok(tungstenite::Message::Pong(_))) => {
+                        // Handle pong
+                    }
                     Some(Ok(tungstenite::Message::Close(_))) => {
                         println!("Connection closed");
                         break;
+                    }
+                    Some(Ok(tungstenite::Message::Frame(_))) => {
+                        // Handle frame if needed
                     }
                     Some(Err(e)) => {
                         eprintln!("WebSocket error: {}", e);
