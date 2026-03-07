@@ -1,5 +1,5 @@
 [package]
-name = "meetkey-service"
+name = "meetkey-center"
 version = "0.1.0"
 edition = "2021"
 
