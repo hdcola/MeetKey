@@ -16,7 +16,8 @@
       "Bash(pgrep:*)",
       "Bash(pnpm build:*)",
       "Bash(pnpm list:*)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "Bash(mkdir:*)"
     ]
   }
 }
