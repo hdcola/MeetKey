@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
-    "dev-build": "vite",
-    "build": "vite build && tauri build"
+    "build-frontend": "vite build",
+    "build": "tauri build"
   },
   "dependencies": {
     "@meetkey/shared": "workspace:*",
