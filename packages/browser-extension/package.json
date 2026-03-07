@@ -9,10 +9,10 @@
   },
   "dependencies": {
     "@meetkey/shared": "workspace:*",
-    "vue": "^3.4.21"
+    "vue": "^3.5.29"
   },
   "devDependencies": {
     "@wxt-dev/auto-icons": "^1.1.1",
-    "wxt": "^0.20.4"
+    "wxt": "^0.20.18"
   }
 }
