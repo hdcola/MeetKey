@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 use tokio_tungstenite::{accept_async, tungstenite};
 use futures::stream::StreamExt;
 use futures::SinkExt;
@@ -64,14 +64,13 @@ impl WebSocketServer {
         }
     }
 
-    pub fn update_state(&self, status: MeetDeviceStatus) {
-        if let Ok(mut state) = self.current_state.lock() {
-            *state = status.clone();
-        }
+    pub async fn update_state(&self, status: MeetDeviceStatus) {
+        let mut state = self.current_state.lock().await;
+        *state = status.clone();
     }
 
-    pub fn get_state(&self) -> MeetDeviceStatus {
-        self.current_state.lock().unwrap().clone()
+    pub async fn get_state(&self) -> MeetDeviceStatus {
+        self.current_state.lock().await.clone()
     }
 }
 
@@ -91,21 +90,40 @@ async fn handle_connection(
                 match msg {
                     Some(Ok(tungstenite::Message::Text(text))) => {
                         if let Ok(message) = serde_json::from_str::<WebSocketMessage>(&text) {
+                            println!("📨 Received message type: {}", message.msg_type);
                             match message.msg_type.as_str() {
                                 "state-update" => {
                                     // Update server state
                                     if let Some(payload) = &message.payload {
                                         if let Ok(status) = serde_json::from_value::<MeetDeviceStatus>(payload.clone()) {
-                                            if let Ok(mut s) = state.lock() {
-                                                *s = status;
-                                            }
+                                            let mut s = state.lock().await;
+                                            *s = status;
+                                            println!("✅ State updated: {:?}", s);
                                         }
                                     }
                                     // Broadcast state update to all clients
                                     let _ = broadcast_tx.send(message);
                                 }
+                                "state-query" => {
+                                    // Handle state query - send current state back to client
+                                    let current_state = state.lock().await;
+                                    let response = WebSocketMessage {
+                                        id: message.id.clone(),
+                                        msg_type: "state-response".to_string(),
+                                        timestamp: std::time::SystemTime::now()
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap()
+                                            .as_millis() as u64,
+                                        payload: Some(serde_json::to_value(&*current_state).unwrap()),
+                                    };
+                                    println!("📤 Sending state-response: {:?}", response);
+                                    let _ = write.send(tungstenite::Message::Text(
+                                        serde_json::to_string(&response).unwrap()
+                                    )).await;
+                                    drop(current_state);
+                                }
                                 _ => {
-                                    // Echo other message types
+                                    // Broadcast other message types to all clients
                                     let _ = broadcast_tx.send(message);
                                 }
                             }
@@ -135,8 +153,11 @@ async fn handle_connection(
                     None => break,
                 }
             }
-            _ = broadcast_rx.recv() => {
-                // Forward broadcast messages to client if needed
+            Ok(msg) = broadcast_rx.recv() => {
+                // Forward broadcast messages to all clients
+                if let Ok(text) = serde_json::to_string(&msg) {
+                    let _ = write.send(tungstenite::Message::Text(text)).await;
+                }
             }
         }
     }
