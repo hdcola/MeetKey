@@ -22,6 +22,7 @@ fn main() {
 
   // Start Tauri application
   tauri::Builder::default()
+    .manage(ws_server)
     .setup(|_app| {
       println!("Tauri application started");
       Ok(())
