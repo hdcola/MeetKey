@@ -28,7 +28,7 @@ import ConnectionStatus from '@/components/ConnectionStatus.vue'
 .center-app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   width: 100%;
   padding: 12px 14px;
   background: #ffffff;

@@ -18,8 +18,8 @@
       {
         "title": "MeetKey Center",
         "width": 320,
-        "height": 180,
-        "resizable": false,
+        "height": 320,
+        "resizable": true,
         "fullscreen": false,
         "useHttpsScheme": true
       }
