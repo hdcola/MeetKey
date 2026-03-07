@@ -48,6 +48,7 @@ Thumbs.db
 .turbo/
 
 # Browser extension specific
+packages/browser-extension/.wxt/
 packages/browser-extension/web-ext-artifacts/
 
 # Plugin installation directory (StreamDock)
