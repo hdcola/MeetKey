@@ -22,6 +22,7 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "lint": "eslint .",
+    "lint:check": "eslint . --max-warnings 0",
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist pnpm-lock.yaml && echo '✅ Clean complete: removed node_modules, dist directories, and pnpm-lock.yaml'"
   },
   "devDependencies": {

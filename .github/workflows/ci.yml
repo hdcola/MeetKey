@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   push:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   test:
@@ -48,7 +48,7 @@ jobs:
       # 5. 代码质量检查
       - name: Lint and Format check
         run: |
-          pnpm lint
+          pnpm lint:check
           pnpm format:check
 
       # 6. 执行测试 (递归运行所有包的测试，包括 center 的前后端)
