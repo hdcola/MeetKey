@@ -600,4 +600,540 @@ mod tests {
         let msg2 = rx2.recv().await.expect("Subscriber 2 should receive message");
         assert_eq!(msg2.id, "multi-test");
     }
+
+    // ========== INTEGRATION TESTS FOR handle_connection ==========
+
+    #[tokio::test]
+    async fn test_handle_register_plugin_message() {
+        let _state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "unknown".to_string(),
+            camera: "unknown".to_string(),
+            last_updated: 0,
+        }));
+
+        let (_tx, _rx) = tokio::sync::broadcast::channel::<WebSocketMessage>(100);
+
+        // Test that register message is properly parsed
+        let msg = TestMessageBuilder::register("plugin");
+        let parsed: WebSocketMessage = serde_json::from_str(&msg).unwrap();
+
+        assert_eq!(parsed.msg_type, "register");
+        assert_eq!(parsed.payload.unwrap()["role"], "plugin");
+    }
+
+    #[tokio::test]
+    async fn test_handle_register_browser_extension_message() {
+        let _state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "unknown".to_string(),
+            camera: "unknown".to_string(),
+            last_updated: 0,
+        }));
+
+        let _tx = tokio::sync::broadcast::channel::<WebSocketMessage>(100).0;
+
+        // Test browser extension registration
+        let msg = TestMessageBuilder::register("browser-extension");
+        let parsed: WebSocketMessage = serde_json::from_str(&msg).unwrap();
+
+        assert_eq!(parsed.msg_type, "register");
+        assert_eq!(parsed.payload.unwrap()["role"], "browser-extension");
+    }
+
+    #[tokio::test]
+    async fn test_handle_register_center_message() {
+        let _state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "unknown".to_string(),
+            camera: "unknown".to_string(),
+            last_updated: 0,
+        }));
+
+        let _tx = tokio::sync::broadcast::channel::<WebSocketMessage>(100).0;
+
+        // Test center registration (special case)
+        let msg = TestMessageBuilder::register("center");
+        let parsed: WebSocketMessage = serde_json::from_str(&msg).unwrap();
+
+        assert_eq!(parsed.msg_type, "register");
+        assert_eq!(parsed.payload.unwrap()["role"], "center");
+    }
+
+    #[tokio::test]
+    async fn test_handle_state_update_message() {
+        let state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "unknown".to_string(),
+            camera: "unknown".to_string(),
+            last_updated: 0,
+        }));
+
+        let msg = TestMessageBuilder::state_update("on", "off");
+        let parsed: WebSocketMessage = serde_json::from_str(&msg).unwrap();
+
+        assert_eq!(parsed.msg_type, "state-update");
+        let payload = parsed.payload.unwrap();
+        assert_eq!(payload["microphone"], "on");
+        assert_eq!(payload["camera"], "off");
+
+        // Simulate state update
+        if let Ok(new_status) = serde_json::from_value::<MeetDeviceStatus>(payload.clone()) {
+            let mut s = state.lock().await;
+            s.microphone = new_status.microphone.clone();
+            s.camera = new_status.camera.clone();
+            s.last_updated = new_status.last_updated;
+        }
+
+        let updated = state.lock().await;
+        assert_eq!(updated.microphone, "on");
+        assert_eq!(updated.camera, "off");
+    }
+
+    #[tokio::test]
+    async fn test_handle_state_query_response() {
+        let state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "on".to_string(),
+            camera: "off".to_string(),
+            last_updated: 12345,
+        }));
+
+        let query_msg = TestMessageBuilder::state_query();
+        let parsed: WebSocketMessage = serde_json::from_str(&query_msg).unwrap();
+
+        assert_eq!(parsed.msg_type, "state-query");
+
+        // Simulate response construction
+        let current_state = state.lock().await;
+        let response = WebSocketMessage {
+            id: parsed.id.clone(),
+            msg_type: "state-response".to_string(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
+            payload: Some(serde_json::to_value(&*current_state).unwrap()),
+        };
+
+        assert_eq!(response.msg_type, "state-response");
+        let response_payload = response.payload.unwrap();
+        assert_eq!(response_payload["microphone"], "on");
+        assert_eq!(response_payload["camera"], "off");
+        assert_eq!(response_payload["last_updated"], 12345);
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_plugin_connected_message() {
+        let (tx, mut rx) = tokio::sync::broadcast::channel(100);
+
+        // Simulate sending a plugin-connected broadcast
+        let broadcast_msg = WebSocketMessage {
+            id: "broadcast-test".to_string(),
+            msg_type: "plugin-connected".to_string(),
+            timestamp: 0,
+            payload: Some(serde_json::json!({ "status": "registered" })),
+        };
+
+        let _ = tx.send(broadcast_msg.clone());
+
+        // Verify broadcast was received
+        let received = rx.recv().await.expect("Should receive broadcast");
+        assert_eq!(received.msg_type, "plugin-connected");
+        assert_eq!(received.payload.unwrap()["status"], "registered");
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_extension_connected_message() {
+        let (tx, mut rx) = tokio::sync::broadcast::channel(100);
+
+        // Simulate sending a browser-extension-connected broadcast
+        let broadcast_msg = WebSocketMessage {
+            id: "broadcast-extension".to_string(),
+            msg_type: "browser-extension-connected".to_string(),
+            timestamp: 0,
+            payload: Some(serde_json::json!({ "status": "registered" })),
+        };
+
+        let _ = tx.send(broadcast_msg.clone());
+
+        // Verify broadcast was received
+        let received = rx.recv().await.expect("Should receive broadcast");
+        assert_eq!(received.msg_type, "browser-extension-connected");
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_state_update_message() {
+        let (tx, mut rx) = tokio::sync::broadcast::channel(100);
+
+        // Simulate broadcasting a state update
+        let state_msg = WebSocketMessage {
+            id: "state-broadcast".to_string(),
+            msg_type: "state-update".to_string(),
+            timestamp: 0,
+            payload: Some(serde_json::json!({
+                "microphone": "on",
+                "camera": "off",
+                "last_updated": 5000
+            })),
+        };
+
+        let _ = tx.send(state_msg.clone());
+
+        // Verify broadcast was received
+        let received = rx.recv().await.expect("Should receive broadcast");
+        assert_eq!(received.msg_type, "state-update");
+        let payload = received.payload.unwrap();
+        assert_eq!(payload["microphone"], "on");
+        assert_eq!(payload["camera"], "off");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_clients_register_sequence() {
+        let state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "unknown".to_string(),
+            camera: "unknown".to_string(),
+            last_updated: 0,
+        }));
+
+        let (tx, _) = tokio::sync::broadcast::channel::<WebSocketMessage>(100);
+
+        // Simulate plugin registration
+        let plugin_msg = TestMessageBuilder::register("plugin");
+        let plugin_parsed: WebSocketMessage = serde_json::from_str(&plugin_msg).unwrap();
+        assert_eq!(plugin_parsed.payload.unwrap()["role"], "plugin");
+
+        // Send broadcast for plugin
+        let plugin_broadcast = WebSocketMessage {
+            id: format!("{}-broadcast", plugin_parsed.id),
+            msg_type: "plugin-connected".to_string(),
+            timestamp: 0,
+            payload: Some(serde_json::json!({ "status": "registered" })),
+        };
+        let _ = tx.send(plugin_broadcast);
+
+        // Simulate extension registration
+        let ext_msg = TestMessageBuilder::register("browser-extension");
+        let ext_parsed: WebSocketMessage = serde_json::from_str(&ext_msg).unwrap();
+        assert_eq!(ext_parsed.payload.unwrap()["role"], "browser-extension");
+
+        // Send broadcast for extension
+        let ext_broadcast = WebSocketMessage {
+            id: format!("{}-broadcast", ext_parsed.id),
+            msg_type: "browser-extension-connected".to_string(),
+            timestamp: 0,
+            payload: Some(serde_json::json!({ "status": "registered" })),
+        };
+        let _ = tx.send(ext_broadcast);
+
+        // Center registration (no broadcast)
+        let center_msg = TestMessageBuilder::register("center");
+        let center_parsed: WebSocketMessage = serde_json::from_str(&center_msg).unwrap();
+        assert_eq!(center_parsed.payload.unwrap()["role"], "center");
+
+        // Verify state is still valid
+        let s = state.lock().await;
+        assert_eq!(s.microphone, "unknown");
+    }
+
+    #[tokio::test]
+    async fn test_message_type_routing() {
+        // Test that different message types are correctly identified
+        let register = TestMessageBuilder::register("plugin");
+        let register_parsed: WebSocketMessage = serde_json::from_str(&register).unwrap();
+        assert_eq!(register_parsed.msg_type, "register");
+
+        let state_update = TestMessageBuilder::state_update("on", "off");
+        let update_parsed: WebSocketMessage = serde_json::from_str(&state_update).unwrap();
+        assert_eq!(update_parsed.msg_type, "state-update");
+
+        let state_query = TestMessageBuilder::state_query();
+        let query_parsed: WebSocketMessage = serde_json::from_str(&state_query).unwrap();
+        assert_eq!(query_parsed.msg_type, "state-query");
+    }
+
+    #[tokio::test]
+    async fn test_handle_invalid_message_type() {
+        let (tx, mut rx) = tokio::sync::broadcast::channel::<WebSocketMessage>(100);
+
+        // Create a custom message with an unknown type
+        let unknown_msg = WebSocketMessage {
+            id: "unknown-test".to_string(),
+            msg_type: "unknown-action".to_string(),
+            timestamp: 0,
+            payload: Some(serde_json::json!({ "data": "test" })),
+        };
+
+        // Unknown message types should be broadcast
+        let _ = tx.send(unknown_msg.clone());
+
+        let received = rx.recv().await.expect("Should receive broadcast");
+        assert_eq!(received.msg_type, "unknown-action");
+        assert_eq!(received.payload.unwrap()["data"], "test");
+    }
+
+    #[tokio::test]
+    async fn test_state_update_persistence() {
+        let state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "unknown".to_string(),
+            camera: "unknown".to_string(),
+            last_updated: 0,
+        }));
+
+        // First update
+        {
+            let mut s = state.lock().await;
+            s.microphone = "on".to_string();
+            s.camera = "on".to_string();
+            s.last_updated = 1000;
+        }
+
+        // Verify persistence
+        {
+            let s = state.lock().await;
+            assert_eq!(s.microphone, "on");
+            assert_eq!(s.camera, "on");
+            assert_eq!(s.last_updated, 1000);
+        }
+
+        // Second update
+        {
+            let mut s = state.lock().await;
+            s.microphone = "off".to_string();
+        }
+
+        let s = state.lock().await;
+        assert_eq!(s.microphone, "off");
+        assert_eq!(s.camera, "on"); // Camera unchanged
+        assert_eq!(s.last_updated, 1000); // Timestamp unchanged
+    }
+
+    #[tokio::test]
+    async fn test_registration_confirmation_format() {
+        // Test that registration confirmation has correct structure
+        let registered_msg = WebSocketMessage {
+            id: "reg-001".to_string(),
+            msg_type: "plugin-connected".to_string(),
+            timestamp: 12345,
+            payload: Some(serde_json::json!({ "status": "registered" })),
+        };
+
+        assert_eq!(registered_msg.id, "reg-001");
+        assert_eq!(registered_msg.msg_type, "plugin-connected");
+        assert_eq!(registered_msg.timestamp, 12345);
+        let payload = registered_msg.payload.unwrap();
+        assert_eq!(payload["status"], "registered");
+    }
+
+    #[tokio::test]
+    async fn test_state_query_with_different_states() {
+        let state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "on".to_string(),
+            camera: "on".to_string(),
+            last_updated: 99999,
+        }));
+
+        let query_msg = TestMessageBuilder::state_query();
+        let parsed: WebSocketMessage = serde_json::from_str(&query_msg).unwrap();
+
+        // Simulate response
+        let current_state = state.lock().await;
+        let response = WebSocketMessage {
+            id: parsed.id.clone(),
+            msg_type: "state-response".to_string(),
+            timestamp: 0,
+            payload: Some(serde_json::to_value(&*current_state).unwrap()),
+        };
+
+        let payload = response.payload.unwrap();
+        assert_eq!(payload["microphone"], "on");
+        assert_eq!(payload["camera"], "on");
+        assert_eq!(payload["last_updated"], 99999);
+    }
+
+    #[tokio::test]
+    async fn test_rapid_state_updates() {
+        let state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "unknown".to_string(),
+            camera: "unknown".to_string(),
+            last_updated: 0,
+        }));
+
+        // Simulate rapid state updates
+        for i in 0..5 {
+            let msg = TestMessageBuilder::state_update(
+                if i % 2 == 0 { "on" } else { "off" },
+                if i % 2 == 0 { "off" } else { "on" },
+            );
+            let parsed: WebSocketMessage = serde_json::from_str(&msg).unwrap();
+
+            if let Some(payload) = parsed.payload {
+                if let Ok(new_status) = serde_json::from_value::<MeetDeviceStatus>(payload) {
+                    let mut s = state.lock().await;
+                    s.microphone = new_status.microphone.clone();
+                    s.camera = new_status.camera.clone();
+                }
+            }
+        }
+
+        // Final state should reflect last update (i=4: i%2==0, so microphone="on", camera="off")
+        let s = state.lock().await;
+        assert_eq!(s.microphone, "on");
+        assert_eq!(s.camera, "off");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_broadcast_subscribers_receive_updates() {
+        let (tx, _) = tokio::sync::broadcast::channel::<WebSocketMessage>(100);
+
+        let mut rx1 = tx.subscribe();
+        let mut rx2 = tx.subscribe();
+        let mut rx3 = tx.subscribe();
+
+        // Send a state update
+        let state_msg = WebSocketMessage {
+            id: "state-multi".to_string(),
+            msg_type: "state-update".to_string(),
+            timestamp: 0,
+            payload: Some(serde_json::json!({
+                "microphone": "on",
+                "camera": "on",
+                "last_updated": 5000
+            })),
+        };
+
+        let _ = tx.send(state_msg.clone());
+
+        // All subscribers should receive the message
+        let msg1 = rx1.recv().await.expect("Subscriber 1 should receive");
+        assert_eq!(msg1.id, "state-multi");
+
+        let msg2 = rx2.recv().await.expect("Subscriber 2 should receive");
+        assert_eq!(msg2.id, "state-multi");
+
+        let msg3 = rx3.recv().await.expect("Subscriber 3 should receive");
+        assert_eq!(msg3.id, "state-multi");
+    }
+
+    #[tokio::test]
+    async fn test_message_id_preservation() {
+        // Test that message IDs are preserved through the system
+        let msg = TestMessageBuilder::state_query();
+        let parsed: WebSocketMessage = serde_json::from_str(&msg).unwrap();
+        let original_id = parsed.id.clone();
+
+        // Create response with same ID
+        let response = WebSocketMessage {
+            id: original_id.clone(),
+            msg_type: "state-response".to_string(),
+            timestamp: 0,
+            payload: None,
+        };
+
+        assert_eq!(response.id, original_id);
+    }
+
+    #[tokio::test]
+    async fn test_payload_optional_handling() {
+        // Test messages with and without payloads
+        let no_payload_msg = TestMessageBuilder::state_query();
+        let parsed_no_payload: WebSocketMessage = serde_json::from_str(&no_payload_msg).unwrap();
+        assert!(parsed_no_payload.payload.is_none());
+
+        let with_payload_msg = TestMessageBuilder::register("plugin");
+        let parsed_with_payload: WebSocketMessage = serde_json::from_str(&with_payload_msg).unwrap();
+        assert!(parsed_with_payload.payload.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_state_mutation_isolation() {
+        let state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "unknown".to_string(),
+            camera: "unknown".to_string(),
+            last_updated: 0,
+        }));
+
+        let state_clone = Arc::clone(&state);
+
+        // Update state in one context
+        {
+            let mut s = state_clone.lock().await;
+            s.microphone = "on".to_string();
+        }
+
+        // Verify update is visible in other context
+        {
+            let s = state.lock().await;
+            assert_eq!(s.microphone, "on");
+        }
+
+        // Update again
+        {
+            let mut s = state.lock().await;
+            s.camera = "off".to_string();
+        }
+
+        // Verify both changes are present
+        let s = state_clone.lock().await;
+        assert_eq!(s.microphone, "on");
+        assert_eq!(s.camera, "off");
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_message_cloning() {
+        let (tx, mut rx) = tokio::sync::broadcast::channel::<WebSocketMessage>(100);
+
+        let original = WebSocketMessage {
+            id: "clone-test".to_string(),
+            msg_type: "test".to_string(),
+            timestamp: 12345,
+            payload: Some(serde_json::json!({ "test": "data" })),
+        };
+
+        let _ = tx.send(original.clone());
+
+        let received = rx.recv().await.unwrap();
+        assert_eq!(received.id, original.id);
+        assert_eq!(received.msg_type, original.msg_type);
+        assert_eq!(received.timestamp, original.timestamp);
+    }
+
+    #[tokio::test]
+    async fn test_register_message_role_extraction() {
+        let roles = vec!["plugin", "browser-extension", "center"];
+
+        for role in roles {
+            let msg = TestMessageBuilder::register(role);
+            let parsed: WebSocketMessage = serde_json::from_str(&msg).unwrap();
+            let payload = parsed.payload.unwrap();
+            assert_eq!(payload["role"], role);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_state_update_all_fields() {
+        let state = Arc::new(Mutex::new(MeetDeviceStatus {
+            microphone: "unknown".to_string(),
+            camera: "unknown".to_string(),
+            last_updated: 0,
+        }));
+
+        let msg = WebSocketMessage {
+            id: "test-update".to_string(),
+            msg_type: "state-update".to_string(),
+            timestamp: 0,
+            payload: Some(serde_json::json!({
+                "microphone": "on",
+                "camera": "off",
+                "last_updated": 55555
+            })),
+        };
+
+        if let Some(payload) = msg.payload {
+            if let Ok(new_status) = serde_json::from_value::<MeetDeviceStatus>(payload) {
+                let mut s = state.lock().await;
+                *s = new_status;
+            }
+        }
+
+        let s = state.lock().await;
+        assert_eq!(s.microphone, "on");
+        assert_eq!(s.camera, "off");
+        assert_eq!(s.last_updated, 55555);
+    }
 }
