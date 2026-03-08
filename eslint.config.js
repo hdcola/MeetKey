@@ -4,6 +4,7 @@ export default [
       '**/node_modules/**',
       '**/dist/**',
       '**/.output/**',
+      '**/coverage/**',
       'packages/center/src-tauri/target/**',
       'packages/center/target/**',
       '**/target/**',

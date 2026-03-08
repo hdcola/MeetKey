@@ -2,7 +2,8 @@
 node_modules
 dist
 .output
-packages/center/src-tauri/target
+**/coverage/**
+packages/center/src-tauri/target/
 packages/center/target
 target
 
