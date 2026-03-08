@@ -19,7 +19,7 @@
     "test:ui": "pnpm -C packages/center test:ui",
     "test:backend": "pnpm -C packages/center test:backend",
     "test:backend:coverage": "cd packages/center/src-tauri && cargo tarpaulin --lib --out Stdout",
-    "format": "prettier . --write && pnpm -C packages/center test:backend -- -- cargo fmt",
+    "format": "prettier . --write && cd packages/center/src-tauri && cargo fmt",
     "format:check": "prettier . --check",
     "lint": "eslint .",
     "lint:check": "eslint . --max-warnings 0",
@@ -28,7 +28,7 @@
   },
   "lint-staged": {
     "*.{js,ts,vue,json,md}": "prettier --write",
-    "*.rs": "pnpm -C packages/center test:backend -- -- cargo fmt"
+    "*.rs": "rustfmt --edition 2021"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
