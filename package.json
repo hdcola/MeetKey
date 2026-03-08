@@ -13,7 +13,7 @@
     "test:watch": "pnpm -r --if-present test:watch",
     "test:coverage": "pnpm -r --if-present test:coverage",
     "test:center": "pnpm -C packages/center test",
-    "test:center:watch": "pnpm -C packages/center test:frontend --watch",
+    "test:center:watch": "pnpm -C packages/center test:frontend",
     "test:center:coverage": "pnpm -C packages/center test:coverage",
     "test:center:backend": "pnpm -C packages/center test:backend",
     "test:ui": "pnpm -C packages/center test:ui",
