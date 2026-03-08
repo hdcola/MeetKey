@@ -90,8 +90,61 @@ async fn handle_connection(
                 match msg {
                     Some(Ok(tungstenite::Message::Text(text))) => {
                         if let Ok(message) = serde_json::from_str::<WebSocketMessage>(&text) {
-                            println!("📨 Received message type: {}", message.msg_type);
+                            // Extract role from payload for better logging
+                            let role_info = message.payload
+                                .as_ref()
+                                .and_then(|p| p.get("role"))
+                                .and_then(|r| r.as_str())
+                                .map(|r| format!(" (role: {})", r))
+                                .unwrap_or_default();
+                            println!("📨 Received message type: {}{}", message.msg_type, role_info);
+                            
                             match message.msg_type.as_str() {
+                                "register" => {
+                                    eprintln!("🔍 DEBUG: Processing register message");
+                                    // Handle client registration
+                                    if let Some(payload) = &message.payload {
+                                        eprintln!("🔍 DEBUG: Payload found: {:?}", payload);
+                                        if let Some(role) = payload.get("role").and_then(|r| r.as_str()) {
+                                            println!("✅ Client registered as: {}", role);
+                                            
+                                            if role != "center" {
+                                                // Send confirmation back to client
+                                            let confirmation = WebSocketMessage {
+                                                id: format!("{}-confirm", message.id),
+                                                msg_type: format!("{}-connected", role),
+                                                timestamp: std::time::SystemTime::now()
+                                                    .duration_since(std::time::UNIX_EPOCH)
+                                                    .unwrap()
+                                                    .as_millis() as u64,
+                                                payload: Some(serde_json::json!({ "status": "registered" })),
+                                            };
+                                            println!("📤 Sending confirmation: {}", confirmation.msg_type);
+                                            let confirm_json = serde_json::to_string(&confirmation).unwrap();
+                                            eprintln!("🔍 DEBUG: Sending JSON: {}", confirm_json);
+                                            match write.send(tungstenite::Message::Text(confirm_json)).await {
+                                                Ok(_) => eprintln!("✅ DEBUG: Confirmation sent successfully"),
+                                                Err(e) => eprintln!("❌ DEBUG: Failed to send confirmation: {}", e),
+                                            }
+                                            
+                                            // Also broadcast to all other clients so they know this role connected
+                                            let broadcast_msg = WebSocketMessage {
+                                                id: format!("{}-broadcast", message.id),
+                                                msg_type: format!("{}-connected", role),
+                                                timestamp: std::time::SystemTime::now()
+                                                    .duration_since(std::time::UNIX_EPOCH)
+                                                    .unwrap()
+                                                    .as_millis() as u64,
+                                                payload: Some(serde_json::json!({ "status": "registered" })),
+                                            };
+                                            println!("📢 Broadcasting: {}", broadcast_msg.msg_type);
+                                            let _ = broadcast_tx.send(broadcast_msg);
+                                            } else {
+                                                println!("🎛️ Center UI connected");
+                                            }
+                                        }
+                                    }
+                                }
                                 "state-update" => {
                                     // Update server state
                                     if let Some(payload) = &message.payload {
@@ -163,4 +216,107 @@ async fn handle_connection(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+    use futures::stream::StreamExt;
+    use futures::SinkExt;
+
+    /// Mock WebSocket stream for testing - captures sent messages and allows injecting received ones
+    struct MockWebSocketStream {
+        /// Messages that were sent through this stream
+        pub sent_messages: Arc<Mutex<Vec<String>>>,
+        /// Messages queued to be "received"
+        pub recv_queue: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl MockWebSocketStream {
+        fn new() -> Self {
+            MockWebSocketStream {
+                sent_messages: Arc::new(Mutex::new(Vec::new())),
+                recv_queue: Arc::new(Mutex::new(Vec::new())),
+            }
+        }
+
+        /// Queue a message to be received
+        async fn queue_recv(&self, msg: String) {
+            self.recv_queue.lock().await.push(msg);
+        }
+
+        /// Get all messages that were sent
+        async fn get_sent_messages(&self) -> Vec<String> {
+            self.sent_messages.lock().await.clone()
+        }
+
+        /// Get the last sent message
+        async fn last_sent(&self) -> Option<String> {
+            self.sent_messages.lock().await.last().cloned()
+        }
+    }
+
+    /// Helper to build valid WebSocket messages for tests
+    struct TestMessageBuilder;
+
+    impl TestMessageBuilder {
+        fn register(role: &str) -> String {
+            let msg = WebSocketMessage {
+                id: format!("test-register-{}", uuid::Uuid::new_v4()),
+                msg_type: "register".to_string(),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64,
+                payload: Some(serde_json::json!({ "role": role })),
+            };
+            serde_json::to_string(&msg).unwrap()
+        }
+
+        fn state_update(microphone: &str, camera: &str) -> String {
+            let msg = WebSocketMessage {
+                id: format!("test-state-{}", uuid::Uuid::new_v4()),
+                msg_type: "state-update".to_string(),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64,
+                payload: Some(serde_json::json!({
+                    "microphone": microphone,
+                    "camera": camera,
+                    "last_updated": 0
+                })),
+            };
+            serde_json::to_string(&msg).unwrap()
+        }
+
+        fn state_query() -> String {
+            let msg = WebSocketMessage {
+                id: format!("test-query-{}", uuid::Uuid::new_v4()),
+                msg_type: "state-query".to_string(),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64,
+                payload: None,
+            };
+            serde_json::to_string(&msg).unwrap()
+        }
+
+        fn invalid_json() -> String {
+            "{invalid json".to_string()
+        }
+
+        fn missing_role() -> String {
+            let msg = WebSocketMessage {
+                id: "test-no-role".to_string(),
+                msg_type: "register".to_string(),
+                timestamp: 0,
+                payload: Some(serde_json::json!({})),
+            };
+            serde_json::to_string(&msg).unwrap()
+        }
+    }
 }
