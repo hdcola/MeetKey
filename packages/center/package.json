@@ -7,7 +7,9 @@
     "dev-frontend": "vite",
     "build-frontend": "vite build",
     "build": "tauri build",
-    "test": "vitest",
+    "test": "pnpm run test:frontend && pnpm run test:backend",
+    "test:frontend": "vitest run",
+    "test:backend": "cd src-tauri && cargo test --lib",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
   },
