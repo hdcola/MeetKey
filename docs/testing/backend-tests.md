@@ -40,13 +40,13 @@ cargo tarpaulin --lib --out Stdout
 
 **Phase 1: Unit Tests (44 tests)**
 
-- **Server initialization** (3 tests): test*websocket_server*\*
-- **State management** (6 tests): test_update_state, test_concurrent_state_reads, etc.
-- **Message parsing** (10 tests): test*websocket_message*_, test*device_status*_
-- **Message builders** (6 tests): test*message_builder*\*
-- **Broadcast channels** (3 tests): test*broadcast*\*
-- **Message routing** (10 tests): test*handle*_, test*registration*_, test_message_type_routing
-- **Integration scenarios** (6 tests): test_multiple_clients_register_sequence, etc.
+- **Server initialization** (3 tests): `test_websocket_server_*`
+- **State management** (6 tests): `test_update_state`, `test_concurrent_state_reads`, etc.
+- **Message parsing** (10 tests): `test_websocket_message_*`, `test_device_status_*`
+- **Message builders** (6 tests): `test_message_builder_*`
+- **Broadcast channels** (3 tests): `test_broadcast_*`
+- **Message routing** (10 tests): `test_handle_*`, `test_registration_*`, `test_message_type_routing`
+- **Integration scenarios** (6 tests): `test_multiple_clients_register_sequence`, etc.
 
 ## Mock Strategy
 
