@@ -10,7 +10,7 @@
     "test": "pnpm run test:frontend:ci && pnpm run test:backend",
     "test:frontend": "vitest",
     "test:frontend:ci": "vitest run",
-    "test:backend": "cd src-tauri && cargo test --lib",
+    "test:backend": "mkdir -p dist && cd src-tauri && cargo test --lib",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
   },
