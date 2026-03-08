@@ -1,10 +1,10 @@
+use futures::stream::StreamExt;
+use futures::SinkExt;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, Mutex};
 use tokio_tungstenite::{accept_async, tungstenite};
-use futures::stream::StreamExt;
-use futures::SinkExt;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeetDeviceStatus {
@@ -98,7 +98,7 @@ async fn handle_connection(
                                 .map(|r| format!(" (role: {})", r))
                                 .unwrap_or_default();
                             println!("📨 Received message type: {}{}", message.msg_type, role_info);
-                            
+
                             match message.msg_type.as_str() {
                                 "register" => {
                                     eprintln!("🔍 DEBUG: Processing register message");
@@ -107,7 +107,7 @@ async fn handle_connection(
                                         eprintln!("🔍 DEBUG: Payload found: {:?}", payload);
                                         if let Some(role) = payload.get("role").and_then(|r| r.as_str()) {
                                             println!("✅ Client registered as: {}", role);
-                                            
+
                                             if role != "center" {
                                                 // Send confirmation back to client
                                             let confirmation = WebSocketMessage {
@@ -126,7 +126,7 @@ async fn handle_connection(
                                                 Ok(_) => eprintln!("✅ DEBUG: Confirmation sent successfully"),
                                                 Err(e) => eprintln!("❌ DEBUG: Failed to send confirmation: {}", e),
                                             }
-                                            
+
                                             // Also broadcast to all other clients so they know this role connected
                                             let broadcast_msg = WebSocketMessage {
                                                 id: format!("{}-broadcast", message.id),
@@ -369,20 +369,24 @@ mod tests {
     async fn test_multiple_state_updates() {
         let server = WebSocketServer::new(8080);
 
-        server.update_state(MeetDeviceStatus {
-            microphone: "on".to_string(),
-            camera: "on".to_string(),
-            last_updated: 1000,
-        }).await;
+        server
+            .update_state(MeetDeviceStatus {
+                microphone: "on".to_string(),
+                camera: "on".to_string(),
+                last_updated: 1000,
+            })
+            .await;
 
         let state1 = server.get_state().await;
         assert_eq!(state1.microphone, "on");
 
-        server.update_state(MeetDeviceStatus {
-            microphone: "off".to_string(),
-            camera: "on".to_string(),
-            last_updated: 2000,
-        }).await;
+        server
+            .update_state(MeetDeviceStatus {
+                microphone: "off".to_string(),
+                camera: "on".to_string(),
+                last_updated: 2000,
+            })
+            .await;
 
         let state2 = server.get_state().await;
         assert_eq!(state2.microphone, "off");
@@ -393,18 +397,18 @@ mod tests {
     async fn test_concurrent_state_reads() {
         let server = Arc::new(WebSocketServer::new(8080));
 
-        server.update_state(MeetDeviceStatus {
-            microphone: "on".to_string(),
-            camera: "on".to_string(),
-            last_updated: 999,
-        }).await;
+        server
+            .update_state(MeetDeviceStatus {
+                microphone: "on".to_string(),
+                camera: "on".to_string(),
+                last_updated: 999,
+            })
+            .await;
 
         let mut handles = vec![];
         for _ in 0..5 {
             let server_clone = Arc::clone(&server);
-            let handle = tokio::spawn(async move {
-                server_clone.get_state().await
-            });
+            let handle = tokio::spawn(async move { server_clone.get_state().await });
             handles.push(handle);
         }
 
@@ -594,10 +598,16 @@ mod tests {
 
         let _ = tx.send(msg.clone());
 
-        let msg1 = rx1.recv().await.expect("Subscriber 1 should receive message");
+        let msg1 = rx1
+            .recv()
+            .await
+            .expect("Subscriber 1 should receive message");
         assert_eq!(msg1.id, "multi-test");
 
-        let msg2 = rx2.recv().await.expect("Subscriber 2 should receive message");
+        let msg2 = rx2
+            .recv()
+            .await
+            .expect("Subscriber 2 should receive message");
         assert_eq!(msg2.id, "multi-test");
     }
 
@@ -1036,7 +1046,8 @@ mod tests {
         assert!(parsed_no_payload.payload.is_none());
 
         let with_payload_msg = TestMessageBuilder::register("plugin");
-        let parsed_with_payload: WebSocketMessage = serde_json::from_str(&with_payload_msg).unwrap();
+        let parsed_with_payload: WebSocketMessage =
+            serde_json::from_str(&with_payload_msg).unwrap();
         assert!(parsed_with_payload.payload.is_some());
     }
 
