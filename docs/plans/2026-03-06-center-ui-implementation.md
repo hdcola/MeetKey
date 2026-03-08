@@ -4,7 +4,8 @@
 
 **Goal:** 实现 MeetKey Center 的主窗口 UI，支持一键控制麦克风和摄像头，显示实时连接状态。
 
-**Architecture:** 
+**Architecture:**
+
 - **Tauri 窗口**：300x150 小窗口，可拖动、可最小化
 - **Vue 3 组件**：主应用组件 + 两个按钮组件 + 连接状态组件
 - **状态管理**：Pinia store 管理设备状态和连接状态，WebSocket 实时同步
@@ -25,6 +26,7 @@
 ## Task 1: 重命名 service 为 center
 
 **文件：**
+
 - Rename: `packages/service/` → `packages/center/`
 - Modify: `pnpm-workspace.yaml`
 - Modify: `package.json` (所有相对路径引用)
@@ -53,10 +55,13 @@ mv packages/service packages/center
 **Step 5: 更新所有包的依赖引用**
 
 在 `packages/plugin` 和 `packages/browser-extension` 中，改：
+
 ```json
 "@meetkey/service": "workspace:*"
 ```
+
 为：
+
 ```json
 "@meetkey/center": "workspace:*"
 ```
@@ -75,6 +80,7 @@ git commit -m "refactor: rename packages/service to packages/center"
 ## Task 2: 配置 Tauri 窗口大小和属性
 
 **文件：**
+
 - Modify: `packages/center/src-tauri/src/main.rs`
 
 **Step 1: 阅读当前的 main.rs 窗口配置**
@@ -101,7 +107,7 @@ cat packages/center/src-tauri/src/main.rs | grep -A 20 "tauri::Builder"
     .always_on_top(false)       // 不置顶
     .skip_taskbar(false)        // 显示在任务栏
     .build()?;
-    
+
     Ok(())
 })
 ```
@@ -146,6 +152,7 @@ git commit -m "config: set Center window to 300x150 with drag and minimize suppo
 ## Task 3: 创建 Center Pinia 状态存储
 
 **文件：**
+
 - Create: `packages/center/src/stores/centerStore.ts`
 
 **Step 1: 分析需要管理的状态**
@@ -160,50 +167,50 @@ CenterStore 应该管理：
 
 ```typescript
 // packages/center/src/stores/centerStore.ts
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
 
-export type ConnectionStatus = 'connected' | 'disconnected' | 'initializing'
-export type DeviceState = 'on' | 'off' | 'unknown'
+export type ConnectionStatus = 'connected' | 'disconnected' | 'initializing';
+export type DeviceState = 'on' | 'off' | 'unknown';
 
 export const useCenterStore = defineStore('center', () => {
   // 设备状态
-  const microphone = ref<DeviceState>('unknown')
-  const camera = ref<DeviceState>('unknown')
+  const microphone = ref<DeviceState>('unknown');
+  const camera = ref<DeviceState>('unknown');
 
   // 连接状态
-  const pluginConnection = ref<ConnectionStatus>('initializing')
-  const browserConnection = ref<ConnectionStatus>('initializing')
+  const pluginConnection = ref<ConnectionStatus>('initializing');
+  const browserConnection = ref<ConnectionStatus>('initializing');
 
   // 计算属性
-  const isMicrophoneOn = computed(() => microphone.value === 'on')
-  const isCameraOn = computed(() => camera.value === 'on')
+  const isMicrophoneOn = computed(() => microphone.value === 'on');
+  const isCameraOn = computed(() => camera.value === 'on');
 
   // 方法
   function setMicrophoneState(state: DeviceState) {
-    microphone.value = state
+    microphone.value = state;
   }
 
   function setCameraState(state: DeviceState) {
-    camera.value = state
+    camera.value = state;
   }
 
   function setPluginConnection(status: ConnectionStatus) {
-    pluginConnection.value = status
+    pluginConnection.value = status;
   }
 
   function setBrowserConnection(status: ConnectionStatus) {
-    browserConnection.value = status
+    browserConnection.value = status;
   }
 
   function toggleMicrophone() {
     // 发送命令到服务器，不直接修改状态
     // 状态由 WebSocket 消息更新
-    return microphone.value === 'on' ? 'off' : 'on'
+    return microphone.value === 'on' ? 'off' : 'on';
   }
 
   function toggleCamera() {
-    return camera.value === 'on' ? 'off' : 'on'
+    return camera.value === 'on' ? 'off' : 'on';
   }
 
   return {
@@ -219,8 +226,8 @@ export const useCenterStore = defineStore('center', () => {
     setBrowserConnection,
     toggleMicrophone,
     toggleCamera,
-  }
-})
+  };
+});
 ```
 
 **Step 3: 验证导入路径**
@@ -239,6 +246,7 @@ git commit -m "feat: create centerStore for device and connection state manageme
 ## Task 4: 创建按钮组件（MicrophoneButton）
 
 **文件：**
+
 - Create: `packages/center/src/components/MicrophoneButton.vue`
 
 **Step 1: 设计按钮逻辑**
@@ -266,62 +274,62 @@ git commit -m "feat: create centerStore for device and connection state manageme
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useCenterStore } from '@/stores/centerStore'
+  import { ref, computed } from 'vue';
+  import { useCenterStore } from '@/stores/centerStore';
 
-const store = useCenterStore()
-const isPressing = ref(false)
+  const store = useCenterStore();
+  const isPressing = ref(false);
 
-const isMicrophoneOn = computed(() => store.isMicrophoneOn)
+  const isMicrophoneOn = computed(() => store.isMicrophoneOn);
 
-async function handleClick() {
-  // 视觉反馈：按压效果
-  isPressing.value = true
-  setTimeout(() => {
-    isPressing.value = false
-  }, 100)
+  async function handleClick() {
+    // 视觉反馈：按压效果
+    isPressing.value = true;
+    setTimeout(() => {
+      isPressing.value = false;
+    }, 100);
 
-  // 发送命令到 WebSocket
-  const command = store.toggleMicrophone()
-  
-  // TODO: 发送到 WebSocket（在 Task 6 实现）
-  console.log(`Toggle microphone to: ${command}`)
-}
+    // 发送命令到 WebSocket
+    const command = store.toggleMicrophone();
+
+    // TODO: 发送到 WebSocket（在 Task 6 实现）
+    console.log(`Toggle microphone to: ${command}`);
+  }
 </script>
 
 <style scoped>
-.microphone-button {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  border: 2px solid #e5e7eb;
-  background: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  transition: all 0.2s ease;
-}
+  .microphone-button {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    transition: all 0.2s ease;
+  }
 
-.microphone-button:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-}
+  .microphone-button:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
 
-.microphone-button.pressed {
-  background: #f3f4f6;
-  transform: scale(0.95);
-}
+  .microphone-button.pressed {
+    background: #f3f4f6;
+    transform: scale(0.95);
+  }
 
-.microphone-button.active {
-  background: #dbeafe;
-  border-color: #3b82f6;
-}
+  .microphone-button.active {
+    background: #dbeafe;
+    border-color: #3b82f6;
+  }
 
-.icon {
-  display: inline-block;
-}
+  .icon {
+    display: inline-block;
+  }
 </style>
 ```
 
@@ -337,6 +345,7 @@ git commit -m "feat: create MicrophoneButton component with toggle state and vis
 ## Task 5: 创建按钮组件（CameraButton）
 
 **文件：**
+
 - Create: `packages/center/src/components/CameraButton.vue`
 
 **Step 1: 复制并修改 MicrophoneButton**
@@ -354,59 +363,59 @@ git commit -m "feat: create MicrophoneButton component with toggle state and vis
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useCenterStore } from '@/stores/centerStore'
+  import { ref, computed } from 'vue';
+  import { useCenterStore } from '@/stores/centerStore';
 
-const store = useCenterStore()
-const isPressing = ref(false)
+  const store = useCenterStore();
+  const isPressing = ref(false);
 
-const isCameraOn = computed(() => store.isCameraOn)
+  const isCameraOn = computed(() => store.isCameraOn);
 
-async function handleClick() {
-  isPressing.value = true
-  setTimeout(() => {
-    isPressing.value = false
-  }, 100)
+  async function handleClick() {
+    isPressing.value = true;
+    setTimeout(() => {
+      isPressing.value = false;
+    }, 100);
 
-  const command = store.toggleCamera()
-  console.log(`Toggle camera to: ${command}`)
-}
+    const command = store.toggleCamera();
+    console.log(`Toggle camera to: ${command}`);
+  }
 </script>
 
 <style scoped>
-/* 与 MicrophoneButton 相同的样式 */
-.camera-button {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  border: 2px solid #e5e7eb;
-  background: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  transition: all 0.2s ease;
-}
+  /* 与 MicrophoneButton 相同的样式 */
+  .camera-button {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    transition: all 0.2s ease;
+  }
 
-.camera-button:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-}
+  .camera-button:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
 
-.camera-button.pressed {
-  background: #f3f4f6;
-  transform: scale(0.95);
-}
+  .camera-button.pressed {
+    background: #f3f4f6;
+    transform: scale(0.95);
+  }
 
-.camera-button.active {
-  background: #dbeafe;
-  border-color: #3b82f6;
-}
+  .camera-button.active {
+    background: #dbeafe;
+    border-color: #3b82f6;
+  }
 
-.icon {
-  display: inline-block;
-}
+  .icon {
+    display: inline-block;
+  }
 </style>
 ```
 
@@ -422,6 +431,7 @@ git commit -m "feat: create CameraButton component with toggle state and visual 
 ## Task 6: 创建连接状态指示组件
 
 **文件：**
+
 - Create: `packages/center/src/components/ConnectionStatus.vue`
 
 **Step 1: 实现组件**
@@ -445,75 +455,75 @@ git commit -m "feat: create CameraButton component with toggle state and visual 
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useCenterStore } from '@/stores/centerStore'
+  import { computed } from 'vue';
+  import { useCenterStore } from '@/stores/centerStore';
 
-const store = useCenterStore()
+  const store = useCenterStore();
 
-const browserStatusClass = computed(() => {
-  switch (store.browserConnection) {
-    case 'connected':
-      return 'connected'
-    case 'disconnected':
-      return 'disconnected'
-    case 'initializing':
-      return 'initializing'
-    default:
-      return 'initializing'
-  }
-})
+  const browserStatusClass = computed(() => {
+    switch (store.browserConnection) {
+      case 'connected':
+        return 'connected';
+      case 'disconnected':
+        return 'disconnected';
+      case 'initializing':
+        return 'initializing';
+      default:
+        return 'initializing';
+    }
+  });
 
-const pluginStatusClass = computed(() => {
-  switch (store.pluginConnection) {
-    case 'connected':
-      return 'connected'
-    case 'disconnected':
-      return 'disconnected'
-    case 'initializing':
-      return 'initializing'
-    default:
-      return 'initializing'
-  }
-})
+  const pluginStatusClass = computed(() => {
+    switch (store.pluginConnection) {
+      case 'connected':
+        return 'connected';
+      case 'disconnected':
+        return 'disconnected';
+      case 'initializing':
+        return 'initializing';
+      default:
+        return 'initializing';
+    }
+  });
 </script>
 
 <style scoped>
-.connection-status {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
-}
+  .connection-status {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+  }
 
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
-.icon {
-  font-size: 16px;
-}
+  .icon {
+    font-size: 16px;
+  }
 
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  transition: background-color 0.2s ease;
-}
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+  }
 
-.dot.connected {
-  background-color: #10b981; /* green */
-}
+  .dot.connected {
+    background-color: #10b981; /* green */
+  }
 
-.dot.disconnected {
-  background-color: #ef4444; /* red */
-}
+  .dot.disconnected {
+    background-color: #ef4444; /* red */
+  }
 
-.dot.initializing {
-  background-color: #9ca3af; /* gray */
-}
+  .dot.initializing {
+    background-color: #9ca3af; /* gray */
+  }
 </style>
 ```
 
@@ -529,6 +539,7 @@ git commit -m "feat: create ConnectionStatus component with browser and plugin i
 ## Task 7: 创建主应用容器组件
 
 **文件：**
+
 - Modify: `packages/center/src/App.vue`
 
 **Step 1: 实现主应用布局**
@@ -554,64 +565,64 @@ git commit -m "feat: create ConnectionStatus component with browser and plugin i
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import MicrophoneButton from '@/components/MicrophoneButton.vue'
-import CameraButton from '@/components/CameraButton.vue'
-import ConnectionStatus from '@/components/ConnectionStatus.vue'
-import { useCenterStore } from '@/stores/centerStore'
+  import { onMounted } from 'vue';
+  import MicrophoneButton from '@/components/MicrophoneButton.vue';
+  import CameraButton from '@/components/CameraButton.vue';
+  import ConnectionStatus from '@/components/ConnectionStatus.vue';
+  import { useCenterStore } from '@/stores/centerStore';
 
-const store = useCenterStore()
+  const store = useCenterStore();
 
-// 初始化时设置连接状态为 initializing
-onMounted(() => {
-  // TODO: WebSocket 连接逻辑在 Task 8 实现
-  console.log('Center app mounted')
-})
+  // 初始化时设置连接状态为 initializing
+  onMounted(() => {
+    // TODO: WebSocket 连接逻辑在 Task 8 实现
+    console.log('Center app mounted');
+  });
 </script>
 
 <style scoped>
-.center-app {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 12px;
-  background: white;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-.header {
-  margin: 0;
-  padding: 0 0 8px 0;
-}
-
-.header h1 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.buttons-container {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  padding: 12px 0;
-  flex: 1;
-  align-items: center;
-}
-
-/* 使用 Tailwind 的话 */
-:global {
-  * {
-    box-sizing: border-box;
+  .center-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 12px;
+    background: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
-  
-  body {
+
+  .header {
     margin: 0;
-    padding: 0;
-    overflow: hidden;
+    padding: 0 0 8px 0;
   }
-}
+
+  .header h1 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .buttons-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 12px 0;
+    flex: 1;
+    align-items: center;
+  }
+
+  /* 使用 Tailwind 的话 */
+  :global {
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+  }
 </style>
 ```
 
@@ -620,9 +631,9 @@ onMounted(() => {
 确保 `packages/center/src/main.ts` 中有 Pinia 配置：
 
 ```typescript
-import { createPinia } from 'pinia'
+import { createPinia } from 'pinia';
 
-app.use(createPinia())
+app.use(createPinia());
 ```
 
 **Step 3: 提交**
@@ -637,99 +648,100 @@ git commit -m "feat: create Center app main layout with buttons and connection s
 ## Task 8: 实现 WebSocket 连接和消息处理
 
 **文件：**
+
 - Create: `packages/center/src/services/websocketService.ts`
 
 **Step 1: 创建 WebSocket 服务**
 
 ```typescript
 // packages/center/src/services/websocketService.ts
-import { useCenterStore } from '@/stores/centerStore'
+import { useCenterStore } from '@/stores/centerStore';
 
 export class WebSocketService {
-  private ws: WebSocket | null = null
-  private url: string
-  private reconnectAttempts = 0
-  private maxReconnectAttempts = 5
+  private ws: WebSocket | null = null;
+  private url: string;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
 
   constructor(url: string = 'ws://127.0.0.1:8080') {
-    this.url = url
+    this.url = url;
   }
 
   connect() {
     try {
-      this.ws = new WebSocket(this.url)
-      
-      this.ws.onopen = this.handleOpen.bind(this)
-      this.ws.onmessage = this.handleMessage.bind(this)
-      this.ws.onerror = this.handleError.bind(this)
-      this.ws.onclose = this.handleClose.bind(this)
+      this.ws = new WebSocket(this.url);
+
+      this.ws.onopen = this.handleOpen.bind(this);
+      this.ws.onmessage = this.handleMessage.bind(this);
+      this.ws.onerror = this.handleError.bind(this);
+      this.ws.onclose = this.handleClose.bind(this);
     } catch (error) {
-      console.error('Failed to create WebSocket:', error)
+      console.error('Failed to create WebSocket:', error);
     }
   }
 
   private handleOpen() {
-    console.log('WebSocket connected')
-    this.reconnectAttempts = 0
+    console.log('WebSocket connected');
+    this.reconnectAttempts = 0;
     // 发送初始化消息
-    this.send({ type: 'init', client: 'center' })
+    this.send({ type: 'init', client: 'center' });
   }
 
   private handleMessage(event: MessageEvent) {
-    const store = useCenterStore()
-    const message = JSON.parse(event.data)
+    const store = useCenterStore();
+    const message = JSON.parse(event.data);
 
-    console.log('Received message:', message)
+    console.log('Received message:', message);
 
     switch (message.type) {
       case 'state-update':
         if (message.state.microphone !== undefined) {
-          store.setMicrophoneState(message.state.microphone === 'on' ? 'on' : 'off')
+          store.setMicrophoneState(message.state.microphone === 'on' ? 'on' : 'off');
         }
         if (message.state.camera !== undefined) {
-          store.setCameraState(message.state.camera === 'on' ? 'on' : 'off')
+          store.setCameraState(message.state.camera === 'on' ? 'on' : 'off');
         }
-        break
+        break;
 
       case 'plugin-connected':
-        store.setPluginConnection('connected')
-        break
+        store.setPluginConnection('connected');
+        break;
 
       case 'plugin-disconnected':
-        store.setPluginConnection('disconnected')
-        break
+        store.setPluginConnection('disconnected');
+        break;
 
       case 'browser-connected':
-        store.setBrowserConnection('connected')
-        break
+        store.setBrowserConnection('connected');
+        break;
 
       case 'browser-disconnected':
-        store.setBrowserConnection('disconnected')
-        break
+        store.setBrowserConnection('disconnected');
+        break;
     }
   }
 
   private handleError(error: Event) {
-    console.error('WebSocket error:', error)
+    console.error('WebSocket error:', error);
   }
 
   private handleClose() {
-    console.log('WebSocket closed, attempting to reconnect...')
-    const store = useCenterStore()
-    
+    console.log('WebSocket closed, attempting to reconnect...');
+    const store = useCenterStore();
+
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.reconnectAttempts++
-      setTimeout(() => this.connect(), 1000 * this.reconnectAttempts)
+      this.reconnectAttempts++;
+      setTimeout(() => this.connect(), 1000 * this.reconnectAttempts);
     } else {
-      store.setBrowserConnection('disconnected')
+      store.setBrowserConnection('disconnected');
     }
   }
 
   send(message: any) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message))
+      this.ws.send(JSON.stringify(message));
     } else {
-      console.warn('WebSocket not connected, message not sent:', message)
+      console.warn('WebSocket not connected, message not sent:', message);
     }
   }
 
@@ -737,25 +749,25 @@ export class WebSocketService {
     this.send({
       type: 'action',
       action: 'toggle-microphone',
-    })
+    });
   }
 
   toggleCamera() {
     this.send({
       type: 'action',
       action: 'toggle-camera',
-    })
+    });
   }
 
   disconnect() {
     if (this.ws) {
-      this.ws.close()
-      this.ws = null
+      this.ws.close();
+      this.ws = null;
     }
   }
 }
 
-export const wsService = new WebSocketService()
+export const wsService = new WebSocketService();
 ```
 
 **Step 2: 在 main.ts 中初始化连接**
@@ -763,14 +775,14 @@ export const wsService = new WebSocketService()
 修改 `packages/center/src/main.ts`：
 
 ```typescript
-import { wsService } from '@/services/websocketService'
+import { wsService } from '@/services/websocketService';
 
 // ... 其他代码 ...
 
-app.mount('#app')
+app.mount('#app');
 
 // 连接 WebSocket
-wsService.connect()
+wsService.connect();
 ```
 
 **Step 3: 提交**
@@ -785,6 +797,7 @@ git commit -m "feat: implement WebSocket service for state sync and action comma
 ## Task 9: 连接按钮到 WebSocket 命令
 
 **文件：**
+
 - Modify: `packages/center/src/components/MicrophoneButton.vue`
 - Modify: `packages/center/src/components/CameraButton.vue`
 
@@ -792,24 +805,24 @@ git commit -m "feat: implement WebSocket service for state sync and action comma
 
 ```vue
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useCenterStore } from '@/stores/centerStore'
-import { wsService } from '@/services/websocketService'
+  import { ref, computed } from 'vue';
+  import { useCenterStore } from '@/stores/centerStore';
+  import { wsService } from '@/services/websocketService';
 
-const store = useCenterStore()
-const isPressing = ref(false)
+  const store = useCenterStore();
+  const isPressing = ref(false);
 
-const isMicrophoneOn = computed(() => store.isMicrophoneOn)
+  const isMicrophoneOn = computed(() => store.isMicrophoneOn);
 
-async function handleClick() {
-  isPressing.value = true
-  setTimeout(() => {
-    isPressing.value = false
-  }, 100)
+  async function handleClick() {
+    isPressing.value = true;
+    setTimeout(() => {
+      isPressing.value = false;
+    }, 100);
 
-  // 发送命令到 WebSocket
-  wsService.toggleMicrophone()
-}
+    // 发送命令到 WebSocket
+    wsService.toggleMicrophone();
+  }
 </script>
 ```
 
@@ -817,24 +830,24 @@ async function handleClick() {
 
 ```vue
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useCenterStore } from '@/stores/centerStore'
-import { wsService } from '@/services/websocketService'
+  import { ref, computed } from 'vue';
+  import { useCenterStore } from '@/stores/centerStore';
+  import { wsService } from '@/services/websocketService';
 
-const store = useCenterStore()
-const isPressing = ref(false)
+  const store = useCenterStore();
+  const isPressing = ref(false);
 
-const isCameraOn = computed(() => store.isCameraOn)
+  const isCameraOn = computed(() => store.isCameraOn);
 
-async function handleClick() {
-  isPressing.value = true
-  setTimeout(() => {
-    isPressing.value = false
-  }, 100)
+  async function handleClick() {
+    isPressing.value = true;
+    setTimeout(() => {
+      isPressing.value = false;
+    }, 100);
 
-  // 发送命令到 WebSocket
-  wsService.toggleCamera()
-}
+    // 发送命令到 WebSocket
+    wsService.toggleCamera();
+  }
 </script>
 ```
 
@@ -850,6 +863,7 @@ git commit -m "feat: connect buttons to WebSocket service for sending toggle com
 ## Task 10: 改进样式和响应式设计
 
 **文件：**
+
 - Modify: `packages/center/src/App.vue`
 - Modify: `packages/center/src/components/MicrophoneButton.vue`
 - Modify: `packages/center/src/components/CameraButton.vue`
@@ -859,42 +873,41 @@ git commit -m "feat: connect buttons to WebSocket service for sending toggle com
 
 ```vue
 <style scoped>
-.center-app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100%;
-  padding: 10px;
-  background: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue',
-    sans-serif;
-  box-shadow: inset 0 0 0 1px #e5e7eb;
-}
+  .center-app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    padding: 10px;
+    background: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+    box-shadow: inset 0 0 0 1px #e5e7eb;
+  }
 
-.header {
-  flex-shrink: 0;
-  padding: 0 0 4px 0;
-  user-select: none;
-  -webkit-user-select: none;
-}
+  .header {
+    flex-shrink: 0;
+    padding: 0 0 4px 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
 
-.header h1 {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
+  .header h1 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
 
-.buttons-container {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  align-items: center;
-  flex: 1;
-  min-height: 0;
-}
+  .buttons-container {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    min-height: 0;
+  }
 </style>
 ```
 
@@ -904,50 +917,50 @@ git commit -m "feat: connect buttons to WebSocket service for sending toggle com
 
 ```vue
 <style scoped>
-.microphone-button,
-.camera-button {
-  width: 55px;
-  height: 55px;
-  border-radius: 10px;
-  border: 2px solid #e5e7eb;
-  background: #ffffff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  flex-shrink: 0;
-  outline: none;
-  -webkit-app-region: no-drag; /* 允许点击 */
-}
+  .microphone-button,
+  .camera-button {
+    width: 55px;
+    height: 55px;
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+    background: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    outline: none;
+    -webkit-app-region: no-drag; /* 允许点击 */
+  }
 
-.microphone-button:hover,
-.camera-button:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
+  .microphone-button:hover,
+  .camera-button:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
 
-.microphone-button.pressed,
-.camera-button.pressed {
-  background: #eff6ff;
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-  transform: scale(0.95);
-}
+  .microphone-button.pressed,
+  .camera-button.pressed {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    transform: scale(0.95);
+  }
 
-.microphone-button.active,
-.camera-button.active {
-  background: #dbeafe;
-  border-color: #60a5fa;
-  color: #1e40af;
-}
+  .microphone-button.active,
+  .camera-button.active {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1e40af;
+  }
 
-.icon {
-  display: inline-block;
-  line-height: 1;
-}
+  .icon {
+    display: inline-block;
+    line-height: 1;
+  }
 </style>
 ```
 
@@ -955,55 +968,58 @@ git commit -m "feat: connect buttons to WebSocket service for sending toggle com
 
 ```vue
 <style scoped>
-.connection-status {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  padding: 6px 0 0 0;
-  border-top: 1px solid #e5e7eb;
-  flex-shrink: 0;
-}
-
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.icon {
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.dot.connected {
-  background-color: #10b981;
-  box-shadow: 0 0 4px rgba(16, 185, 129, 0.5);
-}
-
-.dot.disconnected {
-  background-color: #ef4444;
-}
-
-.dot.initializing {
-  background-color: #9ca3af;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
+  .connection-status {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 6px 0 0 0;
+    border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
   }
-  50% {
-    opacity: 0.5;
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
-}
+
+  .icon {
+    font-size: 14px;
+    opacity: 0.8;
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    transition:
+      background-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .dot.connected {
+    background-color: #10b981;
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.5);
+  }
+
+  .dot.disconnected {
+    background-color: #ef4444;
+  }
+
+  .dot.initializing {
+    background-color: #9ca3af;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
 </style>
 ```
 
@@ -1041,6 +1057,7 @@ git commit -m "style: polish Center UI with improved button feedback and respons
 ## Task 11: 测试 UI 功能（手动测试检查清单）
 
 **文件：**
+
 - Test: 手动验证
 
 **验收清单：**
@@ -1093,6 +1110,7 @@ git commit -m "test: manual verification of Center UI functionality"
 ## Task 12: 集成 @meetkey/shared 消息类型（可选但推荐）
 
 **文件：**
+
 - Modify: `packages/center/src/services/websocketService.ts`
 
 **Step 1: 验证 @meetkey/shared 中的消息类型**
@@ -1101,18 +1119,18 @@ git commit -m "test: manual verification of Center UI functionality"
 
 ```typescript
 export type ActionMessage = {
-  type: 'action'
-  action: string
-  [key: string]: any
-}
+  type: 'action';
+  action: string;
+  [key: string]: any;
+};
 
 export type StateUpdateMessage = {
-  type: 'state-update'
+  type: 'state-update';
   state: {
-    microphone?: 'on' | 'off'
-    camera?: 'on' | 'off'
-  }
-}
+    microphone?: 'on' | 'off';
+    camera?: 'on' | 'off';
+  };
+};
 ```
 
 **Step 2: 在 websocketService 中使用类型**

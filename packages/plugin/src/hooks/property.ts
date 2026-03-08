@@ -29,7 +29,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
   const server = new WebSocket('ws://127.0.0.1:' + window.argv[0]);
   server.onopen = () => server.send(JSON.stringify({ event: window.argv[2], uuid: window.argv[1] }));
   server.onmessage = (e) => {
-    message.value = JSON.parse(e.data)
+    message.value = JSON.parse(e.data);
   };
 
   // 通知插件
@@ -73,7 +73,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
     server.send(
       JSON.stringify({
         event: 'getGlobalSettings',
-        context: window.argv[1],
+        context: window.argv[1]
       })
     );
   };

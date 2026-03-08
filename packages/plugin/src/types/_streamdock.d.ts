@@ -38,13 +38,13 @@ declare namespace EventPayload {
   type applicationDidLaunch = {
     event: string;
     payload: {
-      application: string
+      application: string;
     };
   };
   type applicationDidTerminate = {
     event: string;
     payload: {
-      application: string
+      application: string;
     };
   };
   type systemDidWakeUp = {
@@ -78,7 +78,7 @@ declare namespace EventPayload {
       size: {
         width: number;
         height: number;
-      }
+      };
     };
     isInMultiAction: boolean;
   };
@@ -88,7 +88,7 @@ declare namespace EventPayload {
       loginName: string;
       loginID: string;
       loginImageUrl: string;
-    }
+    };
   };
   // 按下|抬起|触摸
   type keyDownUpTouchTap = {
@@ -189,7 +189,7 @@ declare namespace EventPayload {
     device: string;
     context: string;
     payload: {
-      controller: "Knob";
+      controller: 'Knob';
       isInMultiAction: boolean;
       coordinates: {
         column: number;
@@ -214,7 +214,7 @@ declare namespace EventPayload {
       };
       setting: {};
       ticks: number;
-    }
+    };
   };
 }
 

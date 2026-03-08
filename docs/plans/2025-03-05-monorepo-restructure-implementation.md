@@ -15,6 +15,7 @@
 ### Task 1: 创建 pnpm 工作区配置
 
 **文件：**
+
 - Create: `pnpm-workspace.yaml`
 
 **步骤 1: 创建 pnpm-workspace.yaml**
@@ -27,9 +28,11 @@ packages:
 **步骤 2: 验证**
 
 确认文件已创建：
+
 ```bash
 ls -la pnpm-workspace.yaml
 ```
+
 Expected: 文件存在
 
 **步骤 3: 提交**
@@ -44,6 +47,7 @@ git commit -m "feat: add pnpm workspace configuration"
 ### Task 2: 创建根 package.json
 
 **文件：**
+
 - Create: `package.json` (根目录，覆盖现有的)
 
 **步骤 1: 创建根 package.json**
@@ -75,6 +79,7 @@ git commit -m "feat: add pnpm workspace configuration"
 ```bash
 cat package.json | grep -A 2 '"name"'
 ```
+
 Expected: `"name": "meetkey"`
 
 **步骤 3: 提交**
@@ -89,6 +94,7 @@ git commit -m "feat: create root package.json with workspace scripts"
 ### Task 3: 创建共享的 TypeScript 配置
 
 **文件：**
+
 - Create: `tsconfig.json`
 
 **步骤 1: 创建根 tsconfig.json**
@@ -123,6 +129,7 @@ git commit -m "feat: create root package.json with workspace scripts"
 ```bash
 cat tsconfig.json | grep -A 3 '"compilerOptions"'
 ```
+
 Expected: JSON 格式正确
 
 **步骤 3: 提交**
@@ -137,6 +144,7 @@ git commit -m "feat: add root TypeScript configuration"
 ### Task 4: 创建 Prettier 配置
 
 **文件：**
+
 - Create: `prettier.config.js`
 
 **步骤 1: 创建 prettier.config.js**
@@ -158,6 +166,7 @@ export default {
 ```bash
 cat prettier.config.js | head -5
 ```
+
 Expected: JavaScript 代码正确
 
 **步骤 3: 提交**
@@ -172,6 +181,7 @@ git commit -m "feat: add Prettier configuration"
 ### Task 5: 创建 ESLint 配置
 
 **文件：**
+
 - Create: `eslint.config.js`
 
 **步骤 1: 创建 eslint.config.js**
@@ -200,6 +210,7 @@ export default [
 ```bash
 cat eslint.config.js | head -5
 ```
+
 Expected: JavaScript 代码正确
 
 **步骤 3: 提交**
@@ -214,6 +225,7 @@ git commit -m "feat: add ESLint configuration"
 ### Task 6: 创建 packages 目录结构
 
 **文件：**
+
 - Create: `packages/` 目录
 
 **步骤 1: 创建目录**
@@ -227,6 +239,7 @@ mkdir -p packages
 ```bash
 ls -la packages/
 ```
+
 Expected: 目录存在
 
 **步骤 3: 创建 .gitkeep 占位符**
@@ -247,6 +260,7 @@ git commit -m "feat: create packages directory structure"
 ### Task 7: 移动 meetkey-plugin 到 packages/plugin
 
 **文件：**
+
 - Move: `meetkey-plugin/` → `packages/plugin/`
 
 **步骤 1: 移动目录**
@@ -260,6 +274,7 @@ mv meetkey-plugin packages/plugin
 ```bash
 ls -la packages/plugin/src/
 ```
+
 Expected: plugin 的源文件存在
 
 **步骤 3: 更新 plugin 目录中的 pnpm-lock.yaml**
@@ -281,11 +296,13 @@ git commit -m "feat: move plugin to packages/plugin"
 ### Task 8: 更新 plugin 的 package.json
 
 **文件：**
+
 - Modify: `packages/plugin/package.json`
 
 **步骤 1: 更新 package.json**
 
 原内容：
+
 ```json
 {
   "name": "vue",
@@ -294,6 +311,7 @@ git commit -m "feat: move plugin to packages/plugin"
 ```
 
 新内容：
+
 ```json
 {
   "name": "@meetkey/plugin",
@@ -328,6 +346,7 @@ git commit -m "feat: move plugin to packages/plugin"
 ```bash
 cat packages/plugin/package.json | grep '"name"'
 ```
+
 Expected: `"name": "@meetkey/plugin"`
 
 **步骤 3: 提交**
@@ -344,6 +363,7 @@ git commit -m "feat: update plugin package.json with scoped name"
 ### Task 9: 创建 @meetkey/shared 包结构
 
 **文件：**
+
 - Create: `packages/shared/`
 - Create: `packages/shared/package.json`
 - Create: `packages/shared/src/`
@@ -359,6 +379,7 @@ mkdir -p packages/shared/src/{types,protocol,utils}
 ```bash
 ls -la packages/shared/src/
 ```
+
 Expected: types, protocol, utils 目录存在
 
 **步骤 3: 提交**
@@ -373,6 +394,7 @@ git commit -m "feat: create shared package structure"
 ### Task 10: 创建 shared 的 package.json
 
 **文件：**
+
 - Create: `packages/shared/package.json`
 
 **步骤 1: 创建 package.json**
@@ -412,6 +434,7 @@ git commit -m "feat: create shared package structure"
 ```bash
 cat packages/shared/package.json | grep '"name"'
 ```
+
 Expected: `"name": "@meetkey/shared"`
 
 **步骤 3: 提交**
@@ -426,6 +449,7 @@ git commit -m "feat: create shared package.json with exports"
 ### Task 11: 创建 shared 的 TypeScript 配置
 
 **文件：**
+
 - Create: `packages/shared/tsconfig.json`
 
 **步骤 1: 创建 tsconfig.json**
@@ -447,6 +471,7 @@ git commit -m "feat: create shared package.json with exports"
 ```bash
 cat packages/shared/tsconfig.json | grep '"extends"'
 ```
+
 Expected: 继承根 tsconfig
 
 **步骤 3: 提交**
@@ -461,6 +486,7 @@ git commit -m "feat: create shared tsconfig.json"
 ### Task 12: 创建 shared 类型定义文件
 
 **文件：**
+
 - Create: `packages/shared/src/types/index.ts`
 
 **步骤 1: 创建基础类型定义**
@@ -470,13 +496,7 @@ git commit -m "feat: create shared tsconfig.json"
  * WebSocket 消息类型定义
  */
 
-export type MessageType =
-  | 'ping'
-  | 'pong'
-  | 'action'
-  | 'event'
-  | 'error'
-  | 'ack';
+export type MessageType = 'ping' | 'pong' | 'action' | 'event' | 'error' | 'ack';
 
 export interface WebSocketMessage {
   id: string;
@@ -529,6 +549,7 @@ export interface DeviceInfo {
 ```bash
 cat packages/shared/src/types/index.ts | head -20
 ```
+
 Expected: TypeScript 代码正确
 
 **步骤 3: 提交**
@@ -543,6 +564,7 @@ git commit -m "feat: add WebSocket message types"
 ### Task 13: 创建 shared 通信协议文件
 
 **文件：**
+
 - Create: `packages/shared/src/protocol/index.ts`
 
 **步骤 1: 创建协议定义**
@@ -592,11 +614,7 @@ export class MessageBuilder {
     };
   }
 
-  static createErrorMessage(
-    id: string,
-    code: string,
-    message: string
-  ): ErrorMessage {
+  static createErrorMessage(id: string, code: string, message: string): ErrorMessage {
     return {
       id,
       type: 'error',
@@ -613,9 +631,7 @@ export function isValidMessage(data: unknown): data is WebSocketMessage {
   if (!data || typeof data !== 'object') return false;
   const msg = data as Record<string, unknown>;
   return (
-    typeof msg.id === 'string' &&
-    typeof msg.type === 'string' &&
-    typeof msg.timestamp === 'number'
+    typeof msg.id === 'string' && typeof msg.type === 'string' && typeof msg.timestamp === 'number'
   );
 }
 ```
@@ -625,6 +641,7 @@ export function isValidMessage(data: unknown): data is WebSocketMessage {
 ```bash
 cat packages/shared/src/protocol/index.ts | head -20
 ```
+
 Expected: TypeScript 代码正确
 
 **步骤 3: 提交**
@@ -639,6 +656,7 @@ git commit -m "feat: add WebSocket protocol builders"
 ### Task 14: 创建 shared 索引文件
 
 **文件：**
+
 - Create: `packages/shared/src/index.ts`
 
 **步骤 1: 创建索引**
@@ -657,6 +675,7 @@ export * from './protocol/index.js';
 ```bash
 cat packages/shared/src/index.ts
 ```
+
 Expected: 文件内容正确
 
 **步骤 3: 提交**
@@ -671,16 +690,19 @@ git commit -m "feat: add shared package index"
 ### Task 15: 更新 plugin 依赖 shared
 
 **文件：**
+
 - Modify: `packages/plugin/package.json`
 
 **步骤 1: 更新依赖**
 
 在 `dependencies` 中添加：
+
 ```json
 "@meetkey/shared": "workspace:*"
 ```
 
 结果：
+
 ```json
 {
   "name": "@meetkey/plugin",
@@ -703,6 +725,7 @@ git commit -m "feat: add shared package index"
 ```bash
 cat packages/plugin/package.json | grep -A 5 '"dependencies"'
 ```
+
 Expected: `@meetkey/shared` 在依赖列表中
 
 **步骤 3: 提交**
@@ -719,6 +742,7 @@ git commit -m "feat: add @meetkey/shared dependency to plugin"
 ### Task 16: 创建 browser-extension 基础框架
 
 **文件：**
+
 - Create: `packages/browser-extension/package.json`
 - Create: `packages/browser-extension/wxt.config.ts`
 - Create: `packages/browser-extension/tsconfig.json`
@@ -798,6 +822,7 @@ export default defineConfig({
 ```bash
 ls -la packages/browser-extension/
 ```
+
 Expected: 文件结构正确
 
 **步骤 7: 提交**
@@ -812,6 +837,7 @@ git commit -m "feat: create browser-extension package framework"
 ### Task 17: 创建 service (Tauri) 基础框架
 
 **文件：**
+
 - Create: `packages/service/package.json`
 - Create: `packages/service/tsconfig.json`
 - Create: `packages/service/src-tauri/Cargo.toml`
@@ -901,9 +927,9 @@ fn main() {
 
 ```vue
 <script setup lang="ts">
-import { ref } from 'vue';
+  import { ref } from 'vue';
 
-const message = ref('MeetKey Service');
+  const message = ref('MeetKey Service');
 </script>
 
 <template>
@@ -913,8 +939,7 @@ const message = ref('MeetKey Service');
   </div>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>
 ```
 
 **步骤 7: 验证**
@@ -922,6 +947,7 @@ const message = ref('MeetKey Service');
 ```bash
 ls -la packages/service/
 ```
+
 Expected: 文件结构正确
 
 **步骤 8: 提交**
@@ -1014,12 +1040,13 @@ git commit -m "feat: verify monorepo builds successfully"
 ### Task 20: 更新 README 和文档
 
 **文件：**
+
 - Modify: `README.md`
 - Modify: `CLAUDE.md`
 
 **步骤 1: 更新 README**
 
-```markdown
+````markdown
 # MeetKey
 
 One-click control of Google Meet in Stream Dock.
@@ -1040,6 +1067,7 @@ This is a **pnpm monorepo** with the following packages:
 ```bash
 pnpm install
 ```
+````
 
 ### Development
 
@@ -1063,7 +1091,8 @@ pnpm format
 
 - [Architecture](docs/plans/2025-03-05-monorepo-restructure-design.md)
 - [CLAUDE.md](CLAUDE.md) - Developer guide for Claude Code
-```
+
+````
 
 **步骤 2: 更新 CLAUDE.md**
 
@@ -1077,13 +1106,15 @@ pnpm format
 
 ### 包结构
 
-```
+````
+
 packages/
-├── shared/              # 共享库（类型、协议）
-├── plugin/              # Stream Deck 插件
-├── browser-extension/   # 浏览器插件 (WXT)
-└── service/             # 中心服务 (Tauri)
-```
+├── shared/ # 共享库（类型、协议）
+├── plugin/ # Stream Deck 插件
+├── browser-extension/ # 浏览器插件 (WXT)
+└── service/ # 中心服务 (Tauri)
+
+````
 
 ### 常用命令
 
@@ -1093,7 +1124,7 @@ packages/
 pnpm dev                 # 并行启动所有包
 pnpm build              # 构建所有包
 pnpm format             # 格式化全部代码
-```
+````
 
 ### 单个包开发
 
@@ -1105,6 +1136,7 @@ pnpm dev                # 仅启动 service 包
 ### 内部依赖
 
 使用 workspace 协议引用：
+
 ```json
 {
   "dependencies": {
@@ -1112,13 +1144,14 @@ pnpm dev                # 仅启动 service 包
   }
 }
 ```
-```
+
+````
 
 **步骤 3: 验证**
 
 ```bash
 cat README.md | head -20
-```
+````
 
 Expected: 内容更新正确
 
@@ -1138,7 +1171,7 @@ git commit -m "docs: update documentation for monorepo structure"
 ✅ `pnpm build` 能构建所有包  
 ✅ 代码格式化和检查通过  
 ✅ Git 历史清晰，每个逻辑单位一个提交  
-✅ 文档更新完整  
+✅ 文档更新完整
 
 ---
 

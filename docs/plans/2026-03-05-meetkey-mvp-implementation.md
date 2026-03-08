@@ -4,14 +4,16 @@
 
 **Goal:** 实现 MeetKey MVP —— 通过 Stream Dock 硬件按钮和系统工具栏快速控制 Google Meet（麦克风和摄像头开关）
 
-**Architecture:** 
+**Architecture:**
+
 - @meetkey/shared 定义通信协议
 - @meetkey/service (Tauri) 中心服务器，维护状态，实时推送给 Plugin 和 Extension
 - @meetkey/browser-extension 注入脚本控制 Google Meet，报告状态给服务
 - @meetkey/plugin Stream Deck 硬件按钮，接收命令并显示状态
 - WebSocket 实时双向通信（方案 C - 推送模型）
 
-**Tech Stack:** 
+**Tech Stack:**
+
 - TypeScript + Vue 3 + Tauri (Rust) + WXT + Vite
 - WebSocket + JSON 通信协议
 - 国际化：i18n (中文 + 英文)
@@ -23,6 +25,7 @@
 ### Task 1: 定义 WebSocket 消息类型
 
 **文件：**
+
 - Modify: `packages/shared/src/types/index.ts`
 
 **Step 1: 更新 types/index.ts - 添加 MeetKey 特定类型**
@@ -35,7 +38,7 @@
  */
 
 // 基础消息类型
-export type MessageType = 
+export type MessageType =
   | 'command'
   | 'state-update'
   | 'state-query'
@@ -126,6 +129,7 @@ Expected: 提交成功
 ### Task 2: 创建消息构建器
 
 **文件：**
+
 - Modify: `packages/shared/src/protocol/index.ts`
 
 **Step 1: 更新 protocol/index.ts - 创建消息构建器**
@@ -160,10 +164,7 @@ export class MessageBuilder {
    * @param device 设备类型 ('microphone' | 'camera')
    * @param action 操作 ('turn-on' | 'turn-off' | 'toggle')
    */
-  static createCommandMessage(
-    device: MeetDeviceType,
-    action: MeetCommandAction
-  ): CommandMessage {
+  static createCommandMessage(device: MeetDeviceType, action: MeetCommandAction): CommandMessage {
     return {
       id: uuidv4(),
       type: 'command',
@@ -243,9 +244,7 @@ export function isValidMessage(data: unknown): data is WebSocketMessage {
   if (!data || typeof data !== 'object') return false;
   const msg = data as Record<string, unknown>;
   return (
-    typeof msg.id === 'string' &&
-    typeof msg.type === 'string' &&
-    typeof msg.timestamp === 'number'
+    typeof msg.id === 'string' && typeof msg.type === 'string' && typeof msg.timestamp === 'number'
   );
 }
 
@@ -302,6 +301,7 @@ Expected: 提交成功
 ### Task 3: 更新 shared 索引文件
 
 **文件：**
+
 - Modify: `packages/shared/src/index.ts`
 
 **Step 1: 更新索引导出**
@@ -347,6 +347,7 @@ Expected: 提交成功
 ### Task 4: 创建 Rust WebSocket 服务器基础
 
 **文件：**
+
 - Create: `packages/service/src-tauri/src/websocket.rs`
 - Modify: `packages/service/src-tauri/Cargo.toml`
 
@@ -404,7 +405,7 @@ impl WebSocketServer {
     pub fn new(port: u16) -> Self {
         let addr = format!("127.0.0.1:{}", port);
         let (broadcast_tx, _) = broadcast::channel(100);
-        
+
         WebSocketServer {
             addr,
             current_state: Arc::new(Mutex::new(MeetDeviceStatus {
@@ -453,7 +454,7 @@ async fn handle_connection(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let ws_stream = accept_async(stream).await?;
     let (write, mut read) = ws_stream.split();
-    
+
     let mut broadcast_rx = broadcast_tx.subscribe();
 
     // Handle incoming messages
@@ -534,6 +535,7 @@ Expected: 提交成功
 ### Task 5: 创建 Service 主程序 - 启动 WebSocket 服务
 
 **文件：**
+
 - Modify: `packages/service/src-tauri/src/main.rs`
 
 **Step 1: 更新 main.rs - 启动 WebSocket 服务**
@@ -559,7 +561,7 @@ async fn main() {
     // Start WebSocket server in background
     let ws_server = Arc::new(WebSocketServer::new(8080));
     let ws_clone = Arc::clone(&ws_server);
-    
+
     tokio::spawn(async move {
         if let Err(e) = ws_clone.start().await {
             eprintln!("WebSocket server error: {}", e);
@@ -601,6 +603,7 @@ Expected: 提交成功
 ### Task 6: 创建 Browser Extension 内容脚本
 
 **文件：**
+
 - Create: `packages/browser-extension/src/entrypoints/content.ts`
 - Create: `packages/browser-extension/src/entrypoints/background.ts`
 
@@ -622,7 +625,7 @@ let ws: WebSocket | null = null;
 function initWebSocket(port: number = 8080) {
   try {
     ws = new WebSocket(`ws://127.0.0.1:${port}`);
-    
+
     ws.onopen = () => {
       console.log('[MeetKey] Connected to local service');
       // 连接时报告当前状态
@@ -753,16 +756,20 @@ function isMicrophoneMuted(): boolean {
   const micButton = findMicrophoneButton();
   if (!micButton) return false;
   // Check if button has "muted" indicator
-  return micButton.getAttribute('aria-pressed') === 'true' ||
-         micButton.querySelector('[aria-label*="muted"]') !== null;
+  return (
+    micButton.getAttribute('aria-pressed') === 'true' ||
+    micButton.querySelector('[aria-label*="muted"]') !== null
+  );
 }
 
 function isCameraOff(): boolean {
   const cameraButton = findCameraButton();
   if (!cameraButton) return false;
   // Check if button has "off" indicator
-  return cameraButton.getAttribute('aria-pressed') === 'true' ||
-         cameraButton.querySelector('[aria-label*="off"]') !== null;
+  return (
+    cameraButton.getAttribute('aria-pressed') === 'true' ||
+    cameraButton.querySelector('[aria-label*="off"]') !== null
+  );
 }
 
 function reportCurrentState() {
@@ -814,7 +821,7 @@ console.log('[MeetKey] Background script loaded');
 // 监听扩展安装
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('[MeetKey] Extension installed/updated:', details.reason);
-  
+
   if (details.reason === 'install') {
     // 打开欢迎页面
     chrome.tabs.create({ url: 'welcome.html' });
@@ -850,6 +857,7 @@ Expected: 提交成功
 ### Task 7: 更新 Browser Extension package.json - 添加依赖
 
 **文件：**
+
 - Modify: `packages/browser-extension/package.json`
 
 **Step 1: 更新 browser-extension package.json**
@@ -910,6 +918,7 @@ Expected: 提交成功
 ### Task 8: 创建 Plugin 按钮组件
 
 **文件：**
+
 - Create: `packages/plugin/src/components/MicrophoneButton.vue`
 - Create: `packages/plugin/src/components/CameraButton.vue`
 
@@ -919,92 +928,85 @@ Expected: 提交成功
 
 ```vue
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { usePluginStore } from '@/stores/plugin';
+  import { ref, onMounted } from 'vue';
+  import { usePluginStore } from '@/stores/plugin';
 
-const props = defineProps<{
-  mode: 'toggle' | 'on' | 'off';
-}>();
+  const props = defineProps<{
+    mode: 'toggle' | 'on' | 'off';
+  }>();
 
-const store = usePluginStore();
-const isActive = ref(false);
+  const store = usePluginStore();
+  const isActive = ref(false);
 
-onMounted(() => {
-  // 订阅状态变化
-  store.subscribeToState((state) => {
-    isActive.value = state.microphone === 'on';
+  onMounted(() => {
+    // 订阅状态变化
+    store.subscribeToState((state) => {
+      isActive.value = state.microphone === 'on';
+    });
+
+    // 初始化状态
+    isActive.value = store.currentState.microphone === 'on';
   });
 
-  // 初始化状态
-  isActive.value = store.currentState.microphone === 'on';
-});
+  function handleClick() {
+    const action = props.mode === 'on' ? 'turn-on' : props.mode === 'off' ? 'turn-off' : 'toggle';
 
-function handleClick() {
-  const action = 
-    props.mode === 'on' ? 'turn-on' :
-    props.mode === 'off' ? 'turn-off' :
-    'toggle';
-  
-  store.sendCommand('microphone', action);
-}
-
-const getIcon = () => {
-  if (props.mode === 'toggle') {
-    return isActive.value ? '🎤' : '🔇';
+    store.sendCommand('microphone', action);
   }
-  return '🎤';
-};
 
-const getLabel = () => {
-  const base = {
-    en: { toggle: 'Microphone', on: 'Turn On Mic', off: 'Turn Off Mic' },
-    zh_CN: { toggle: '麦克风', on: '打开麦克风', off: '关闭麦克风' }
+  const getIcon = () => {
+    if (props.mode === 'toggle') {
+      return isActive.value ? '🎤' : '🔇';
+    }
+    return '🎤';
   };
-  return base[store.language][props.mode];
-};
+
+  const getLabel = () => {
+    const base = {
+      en: { toggle: 'Microphone', on: 'Turn On Mic', off: 'Turn Off Mic' },
+      zh_CN: { toggle: '麦克风', on: '打开麦克风', off: '关闭麦克风' },
+    };
+    return base[store.language][props.mode];
+  };
 </script>
 
 <template>
-  <button
-    class="button"
-    :class="{ active: isActive && mode === 'toggle' }"
-    @click="handleClick"
-  >
+  <button class="button" :class="{ active: isActive && mode === 'toggle' }" @click="handleClick">
     <div class="icon">{{ getIcon() }}</div>
     <div class="label">{{ getLabel() }}</div>
   </button>
 </template>
 
 <style scoped>
-.button {
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #f5f5f5;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+  .button {
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f5f5f5;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
 
-.button:hover {
-  background: #efefef;
-  border-color: #999;
-}
+  .button:hover {
+    background: #efefef;
+    border-color: #999;
+  }
 
-.button.active {
-  background: #4CAF50;
-  color: white;
-  border-color: #388E3C;
-}
+  .button.active {
+    background: #4caf50;
+    color: white;
+    border-color: #388e3c;
+  }
 
-.icon {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
+  .icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
 
-.label {
-  font-size: 12px;
-  font-weight: 500;
-}
+  .label {
+    font-size: 12px;
+    font-weight: 500;
+  }
 </style>
 ```
 
@@ -1014,92 +1016,85 @@ const getLabel = () => {
 
 ```vue
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { usePluginStore } from '@/stores/plugin';
+  import { ref, onMounted } from 'vue';
+  import { usePluginStore } from '@/stores/plugin';
 
-const props = defineProps<{
-  mode: 'toggle' | 'on' | 'off';
-}>();
+  const props = defineProps<{
+    mode: 'toggle' | 'on' | 'off';
+  }>();
 
-const store = usePluginStore();
-const isActive = ref(false);
+  const store = usePluginStore();
+  const isActive = ref(false);
 
-onMounted(() => {
-  // 订阅状态变化
-  store.subscribeToState((state) => {
-    isActive.value = state.camera === 'on';
+  onMounted(() => {
+    // 订阅状态变化
+    store.subscribeToState((state) => {
+      isActive.value = state.camera === 'on';
+    });
+
+    // 初始化状态
+    isActive.value = store.currentState.camera === 'on';
   });
 
-  // 初始化状态
-  isActive.value = store.currentState.camera === 'on';
-});
+  function handleClick() {
+    const action = props.mode === 'on' ? 'turn-on' : props.mode === 'off' ? 'turn-off' : 'toggle';
 
-function handleClick() {
-  const action = 
-    props.mode === 'on' ? 'turn-on' :
-    props.mode === 'off' ? 'turn-off' :
-    'toggle';
-  
-  store.sendCommand('camera', action);
-}
-
-const getIcon = () => {
-  if (props.mode === 'toggle') {
-    return isActive.value ? '📷' : '📷‍🚫';
+    store.sendCommand('camera', action);
   }
-  return '📷';
-};
 
-const getLabel = () => {
-  const base = {
-    en: { toggle: 'Camera', on: 'Turn On Camera', off: 'Turn Off Camera' },
-    zh_CN: { toggle: '摄像头', on: '打开摄像头', off: '关闭摄像头' }
+  const getIcon = () => {
+    if (props.mode === 'toggle') {
+      return isActive.value ? '📷' : '📷‍🚫';
+    }
+    return '📷';
   };
-  return base[store.language][props.mode];
-};
+
+  const getLabel = () => {
+    const base = {
+      en: { toggle: 'Camera', on: 'Turn On Camera', off: 'Turn Off Camera' },
+      zh_CN: { toggle: '摄像头', on: '打开摄像头', off: '关闭摄像头' },
+    };
+    return base[store.language][props.mode];
+  };
 </script>
 
 <template>
-  <button
-    class="button"
-    :class="{ active: isActive && mode === 'toggle' }"
-    @click="handleClick"
-  >
+  <button class="button" :class="{ active: isActive && mode === 'toggle' }" @click="handleClick">
     <div class="icon">{{ getIcon() }}</div>
     <div class="label">{{ getLabel() }}</div>
   </button>
 </template>
 
 <style scoped>
-.button {
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #f5f5f5;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+  .button {
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f5f5f5;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
 
-.button:hover {
-  background: #efefef;
-  border-color: #999;
-}
+  .button:hover {
+    background: #efefef;
+    border-color: #999;
+  }
 
-.button.active {
-  background: #2196F3;
-  color: white;
-  border-color: #1565C0;
-}
+  .button.active {
+    background: #2196f3;
+    color: white;
+    border-color: #1565c0;
+  }
 
-.icon {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
+  .icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
 
-.label {
-  font-size: 12px;
-  font-weight: 500;
-}
+  .label {
+    font-size: 12px;
+    font-weight: 500;
+  }
 </style>
 ```
 
@@ -1125,6 +1120,7 @@ Expected: 提交成功
 ### Task 9: 创建 Plugin Pinia Store - 状态管理
 
 **文件：**
+
 - Create: `packages/plugin/src/stores/plugin.ts`
 
 **Step 1: 创建 plugin store**
@@ -1198,9 +1194,9 @@ export const usePluginStore = defineStore('plugin', () => {
         currentState.microphone = payload.microphone || currentState.microphone;
         currentState.camera = payload.camera || currentState.camera;
         currentState.lastUpdated = payload.last_updated || Date.now();
-        
+
         // Notify subscribers
-        stateSubscribers.forEach(cb => cb(currentState));
+        stateSubscribers.forEach((cb) => cb(currentState));
       }
     }
   }
@@ -1271,6 +1267,7 @@ Expected: 提交成功
 ### Task 10: 更新 Plugin 主组件 - 显示按钮
 
 **文件：**
+
 - Create: `packages/plugin/src/plugin/index.vue`
 
 **Step 1: 创建 plugin 主组件**
@@ -1279,22 +1276,22 @@ Expected: 提交成功
 
 ```vue
 <script setup lang="ts">
-import MicrophoneButton from '@/components/MicrophoneButton.vue';
-import CameraButton from '@/components/CameraButton.vue';
-import { usePluginStore } from '@/stores/plugin';
+  import MicrophoneButton from '@/components/MicrophoneButton.vue';
+  import CameraButton from '@/components/CameraButton.vue';
+  import { usePluginStore } from '@/stores/plugin';
 
-const store = usePluginStore();
+  const store = usePluginStore();
 </script>
 
 <template>
   <div class="meetkey-plugin">
     <h2>MeetKey - Google Meet Control</h2>
-    
+
     <div class="status" v-if="!store.isConnected">
       <span class="status-badge error">Disconnected</span>
       <p>Waiting for Tauri service...</p>
     </div>
-    
+
     <div class="status" v-else>
       <span class="status-badge success">Connected</span>
     </div>
@@ -1322,61 +1319,61 @@ const store = usePluginStore();
 </template>
 
 <style scoped>
-.meetkey-plugin {
-  padding: 16px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  max-width: 600px;
-}
+  .meetkey-plugin {
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    max-width: 600px;
+  }
 
-h2 {
-  margin-top: 0;
-  color: #333;
-}
+  h2 {
+    margin-top: 0;
+    color: #333;
+  }
 
-.status {
-  padding: 8px 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-  font-size: 14px;
-}
+  .status {
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
 
-.status-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 12px;
-  font-weight: 500;
-  margin-right: 8px;
-}
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: 8px;
+  }
 
-.status-badge.success {
-  background: #4CAF50;
-  color: white;
-}
+  .status-badge.success {
+    background: #4caf50;
+    color: white;
+  }
 
-.status-badge.error {
-  background: #f44336;
-  color: white;
-}
+  .status-badge.error {
+    background: #f44336;
+    color: white;
+  }
 
-.control-section {
-  margin-bottom: 24px;
-}
+  .control-section {
+    margin-bottom: 24px;
+  }
 
-.control-section h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  color: #555;
-  font-size: 14px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
+  .control-section h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #555;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
 
-.button-group {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
+  .button-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
 </style>
 ```
 
@@ -1452,13 +1449,14 @@ Expected: 提交成功
 ### Task 12: 创建集成测试文档
 
 **文件：**
+
 - Create: `docs/plans/2026-03-05-meetkey-mvp-testing.md`
 
 **Step 1: 创建测试文档**
 
 创建 `docs/plans/2026-03-05-meetkey-mvp-testing.md`：
 
-```markdown
+````markdown
 # MeetKey MVP 集成测试指南
 
 ## 前置条件
@@ -1472,11 +1470,13 @@ Expected: 提交成功
 ### 场景 1：Tauri Service 启动
 
 **步骤：**
+
 1. 编译 Tauri 应用
    ```bash
    cd packages/service/src-tauri
    cargo build
    ```
+````
 
 2. 验证 WebSocket 服务监听
    ```bash
@@ -1490,11 +1490,13 @@ Expected: 提交成功
 ### 场景 2：Browser Extension 注入和连接
 
 **步骤：**
+
 1. 加载 Chrome 扩展（开发模式）
 2. 访问 Google Meet 页面
 3. 打开浏览器控制台（F12）
 
 **预期结果：** ✅ 控制台显示：
+
 - `[MeetKey] Connected to local service`
 - `[MeetKey] State reported: {microphone: ..., camera: ...}`
 
@@ -1503,6 +1505,7 @@ Expected: 提交成功
 ### 场景 3：Plugin 与 Service 通信
 
 **步骤：**
+
 1. 启动 Tauri Service
 2. 打开 Plugin UI
 3. 查看连接状态
@@ -1514,11 +1517,13 @@ Expected: 提交成功
 ### 场景 4：发送麦克风控制命令
 
 **步骤：**
+
 1. 确保 Google Meet 页面开放
 2. Service 和 Extension 都已连接
 3. Plugin 中点击"麦克风打开"按钮
 
 **预期结果：** ✅
+
 - Google Meet 的麦克风状态改变
 - Plugin 的麦克风切换按钮状态更新
 - 控制台显示：`[MeetKey] Command sent: ...`
@@ -1528,6 +1533,7 @@ Expected: 提交成功
 ### 场景 5：状态同步
 
 **步骤：**
+
 1. 在 Google Meet 网页中手动打开摄像头
 2. 观察 Plugin 中的动态摄像头按钮
 
@@ -1540,6 +1546,7 @@ Expected: 提交成功
 ### 问题：Plugin 无法连接 Service
 
 **解决：**
+
 1. 确保 Tauri Service 在运行
 2. 检查防火墙设置，允许本地回环连接
 3. 查看浏览器控制台和 Tauri 后台日志
@@ -1547,6 +1554,7 @@ Expected: 提交成功
 ### 问题：Extension 无法找到 Meet 按钮
 
 **解决：**
+
 1. 检查 Google Meet 页面是否完全加载
 2. 在控制台运行：`document.querySelectorAll('button[aria-label*="microphone"]')`
 3. 更新选择器以匹配当前 Meet 版本
@@ -1555,20 +1563,21 @@ Expected: 提交成功
 
 ## 性能基准
 
-| 操作 | 目标 | 实际 |
-|------|------|------|
-| 命令执行延迟 | < 200ms | - |
-| 状态同步延迟 | < 500ms | - |
-| Plugin 连接建立 | < 1s | - |
-| Extension 初始化 | < 2s | - |
-```
+| 操作             | 目标    | 实际 |
+| ---------------- | ------- | ---- |
+| 命令执行延迟     | < 200ms | -    |
+| 状态同步延迟     | < 500ms | -    |
+| Plugin 连接建立  | < 1s    | -    |
+| Extension 初始化 | < 2s    | -    |
+
+````
 
 **Step 2: 提交**
 
 ```bash
 git add docs/plans/2026-03-05-meetkey-mvp-testing.md
 git commit -m "docs: add MVP integration testing guide"
-```
+````
 
 Expected: 提交成功
 
@@ -1577,17 +1586,20 @@ Expected: 提交成功
 ## 验收标准
 
 ✅ **代码完整性**
+
 - @meetkey/shared 定义了通信协议
 - @meetkey/service 实现了 WebSocket 服务器
 - @meetkey/browser-extension 可以注入脚本到 Google Meet
 - @meetkey/plugin 提供了 6 个按钮（麦克风/摄像头 各 3 个）
 
 ✅ **通信完整性**
+
 - Plugin ↔ Service ↔ Extension 双向通信
 - 实时状态推送
 - 命令执行反馈
 
 ✅ **版本控制**
+
 - 所有代码已提交
 - 提交信息清晰
 

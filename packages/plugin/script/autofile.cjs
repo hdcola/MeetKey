@@ -64,7 +64,7 @@ manifest.Actions = manifest.Actions.map((item) => {
   return item;
 });
 manifest.Software = Software;
-manifest.ApplicationsToMonitor = ApplicationsToMonitor
+manifest.ApplicationsToMonitor = ApplicationsToMonitor;
 fs.writeJSONSync('./dist/manifest.json', manifest, { spaces: 2, EOL: '\r\n' });
 
 // 复制到插件文件夹 (仅在 Windows 上执行)

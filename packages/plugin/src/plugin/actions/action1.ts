@@ -6,27 +6,28 @@ export default function (name: string) {
   // 事件侦听器
   const plugin = usePluginStore();
 
-  plugin.eventEmitter.subscribe("stopBackground", (data) => {
+  plugin.eventEmitter.subscribe('stopBackground', (data) => {
     //停止背景释放资源
-    plugin.stopBackground(data.device)
-  })
+    plugin.stopBackground(data.device);
+  });
 
   // 监听事件
-  watch(() => Array.from(plugin.devices), (newDevices, oldDevices) => {
-    // console.log('devices:', newDevices, oldDevices);
-    // 设备列表变化对比
-    const delDevices = oldDevices.filter(item => !newDevices.includes(item));
-    delDevices.forEach((device) => {
-
-    })
-  }, { deep: true })
+  watch(
+    () => Array.from(plugin.devices),
+    (newDevices, oldDevices) => {
+      // console.log('devices:', newDevices, oldDevices);
+      // 设备列表变化对比
+      const delDevices = oldDevices.filter((item) => !newDevices.includes(item));
+      delDevices.forEach((device) => {});
+    },
+    { deep: true }
+  );
 
   useWatchEvent('action', {
     ActionID,
     willAppear({ context }) {
       console.log('创建:', context);
     },
-    keyUp({ context }) {
-    }
+    keyUp({ context }) {}
   });
 }

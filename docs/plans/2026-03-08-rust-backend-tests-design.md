@@ -1,4 +1,5 @@
 # Rust Backend Testing Design
+
 **Date**: 2026-03-08  
 **Status**: Approved  
 **Target Coverage**: >80% (matching frontend coverage goal)
@@ -16,6 +17,7 @@ Add comprehensive unit tests for the Rust WebSocket backend (`packages/center/sr
 ## Testing Strategy
 
 ### Test Approach
+
 - **Framework**: Standard Rust `#[cfg(test)]` modules with `#[tokio::test]` macro
 - **Mock Strategy**: Hand-written simple mock structs (no `mockito`/`mockall`)
 - **Phase 1**: Unit tests with mocks (this phase)
@@ -24,6 +26,7 @@ Add comprehensive unit tests for the Rust WebSocket backend (`packages/center/sr
 ### Test Scope
 
 #### Core Functions to Test (High Priority)
+
 1. **WebSocketServer::new()** - Initialization and setup
 2. **WebSocketServer::get_state()** - Read current device state
 3. **WebSocketServer::update_state()** - Modify state, verify concurrency safety
@@ -35,6 +38,7 @@ Add comprehensive unit tests for the Rust WebSocket backend (`packages/center/sr
 #### Test Scenarios by Message Type
 
 **Register Message**
+
 - ✅ Plugin/Extension client registration succeeds
 - ✅ Center UI registration (special case, no confirmation)
 - ✅ Confirmation sent back to registering client
@@ -42,6 +46,7 @@ Add comprehensive unit tests for the Rust WebSocket backend (`packages/center/sr
 - ✅ Invalid payload handling
 
 **State Update Message**
+
 - ✅ Update microphone state
 - ✅ Update camera state
 - ✅ Update both states
@@ -49,11 +54,13 @@ Add comprehensive unit tests for the Rust WebSocket backend (`packages/center/sr
 - ✅ Invalid state format handling
 
 **State Query Message**
+
 - ✅ Return current state
 - ✅ Respond with correct message ID
 - ✅ Handle when state is unknown/empty
 
 **Error Cases**
+
 - ✅ Malformed JSON parsing
 - ✅ Missing required fields
 - ✅ Connection close/disconnect
@@ -62,30 +69,35 @@ Add comprehensive unit tests for the Rust WebSocket backend (`packages/center/sr
 ### Mock Components
 
 **MockTcpStream**
+
 - Simulates TCP socket read/write
 - Can inject test data
 - Can simulate connection drops
 
 **MockWebSocketStream**
+
 - Wraps MockTcpStream
 - Simulates WebSocket framing
 - Can verify sent messages
 
 **TestMessageBuilder**
+
 - Helper to construct valid WebSocket messages
 - Generates register, state-update, state-query messages
 - Creates invalid messages for error testing
 
 ### Coverage Targets
-| Metric | Target |
-|--------|--------|
-| Statements | >80% |
-| Branches | >75% |
-| Functions | >90% |
+
+| Metric     | Target |
+| ---------- | ------ |
+| Statements | >80%   |
+| Branches   | >75%   |
+| Functions  | >90%   |
 
 ## Architecture
 
 ### Test File Organization
+
 ```
 packages/center/src-tauri/src/
 ├── main.rs                    (unchanged)
@@ -98,6 +110,7 @@ Tests will be added as inline `#[cfg(test)]` modules within `websocket.rs` to ke
 ### Test Dependencies
 
 Add to `Cargo.toml`:
+
 ```toml
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "rt"] }
@@ -122,12 +135,14 @@ All other dependencies already exist in the main `[dependencies]` section.
 ## Future Phases
 
 **Phase 2: Integration Tests**
+
 - Real TCP connections
 - Real WebSocket protocol
 - Multiple concurrent clients
 - Connection stability scenarios
 
 **Phase 3: E2E Tests**
+
 - Full backend + frontend communication flow
 - Realistic client registration → state sync → disconnect
 

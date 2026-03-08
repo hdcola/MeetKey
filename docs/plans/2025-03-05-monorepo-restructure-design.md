@@ -69,25 +69,27 @@ meetkey/
 
 ### 3.2 包职责
 
-| 包 | 技术栈 | 职责 |
-|---|---|---|
-| `@meetkey/shared` | TypeScript | 共享类型定义、消息协议、工具函数 |
-| `@meetkey/plugin` | Vue 3 + TypeScript + Vite | Stream Deck 插件（button/action 处理）|
-| `@meetkey/browser-extension` | Vue 3 + TypeScript + WXT | 浏览器扩展（Google Meet 控制） |
-| `@meetkey/service` | Tauri + Rust + Vue 3 | 中心服务（WebSocket server、插件安装） |
+| 包                           | 技术栈                    | 职责                                   |
+| ---------------------------- | ------------------------- | -------------------------------------- |
+| `@meetkey/shared`            | TypeScript                | 共享类型定义、消息协议、工具函数       |
+| `@meetkey/plugin`            | Vue 3 + TypeScript + Vite | Stream Deck 插件（button/action 处理） |
+| `@meetkey/browser-extension` | Vue 3 + TypeScript + WXT  | 浏览器扩展（Google Meet 控制）         |
+| `@meetkey/service`           | Tauri + Rust + Vue 3      | 中心服务（WebSocket server、插件安装） |
 
 ## 4. 关键设计决策
 
 ### 4.1 Pnpm Monorepo
 
 **选择理由：**
+
 - Workspace 支持高效的内部依赖管理
 - 节省磁盘空间（共享 node_modules）
 - 支持并行构建和开发
 
-### 4.2 Scoped Packages (@meetkey/*)
+### 4.2 Scoped Packages (@meetkey/\*)
 
 **选择理由：**
+
 - 清晰的命名空间
 - 避免命名冲突
 - 最佳实践
@@ -95,11 +97,13 @@ meetkey/
 ### 4.3 根目录共享配置
 
 **共享项目：**
+
 - `tsconfig.json` - 基础 TypeScript 配置，各包继承
 - `prettier.config.js` - 代码格式化规则
 - `eslint.config.js` - 代码检查规则
 
 **好处：**
+
 - 保持代码风格统一
 - 减少重复配置
 - 便于维护
@@ -107,10 +111,12 @@ meetkey/
 ### 4.4 联合版本号管理
 
 **策略：**
+
 - 所有包共享同一版本号
 - 更新时统一升级
 
 **优点：**
+
 - 简化发布流程
 - 明确的发布周期
 - 便于追踪项目演进
@@ -146,6 +152,7 @@ meetkey/
 ```
 
 **特点：**
+
 - 中心服务作为 WebSocket 服务器
 - 两个插件作为客户端连接
 - 共享 `@meetkey/shared` 定义消息协议
@@ -163,11 +170,13 @@ pnpm install
 ### 5.2 本地开发
 
 **启动所有包的开发服务：**
+
 ```bash
 pnpm dev
 ```
 
 **启动单个包：**
+
 ```bash
 cd packages/service
 pnpm dev
@@ -191,27 +200,30 @@ cd packages/service && pnpm build
 
 ## 6. 构建产物
 
-| 包 | 产物 | 位置 |
-|---|---|---|
-| `@meetkey/plugin` | `.sdPlugin` 目录 | `packages/plugin/dist/` |
-| `@meetkey/browser-extension` | 浏览器扩展包 | `packages/browser-extension/dist/` |
-| `@meetkey/service` | 可执行程序 (.exe/.dmg) | `packages/service/src-tauri/target/release/` |
-| `@meetkey/shared` | JavaScript/TypeScript 模块 | `packages/shared/dist/` |
+| 包                           | 产物                       | 位置                                         |
+| ---------------------------- | -------------------------- | -------------------------------------------- |
+| `@meetkey/plugin`            | `.sdPlugin` 目录           | `packages/plugin/dist/`                      |
+| `@meetkey/browser-extension` | 浏览器扩展包               | `packages/browser-extension/dist/`           |
+| `@meetkey/service`           | 可执行程序 (.exe/.dmg)     | `packages/service/src-tauri/target/release/` |
+| `@meetkey/shared`            | JavaScript/TypeScript 模块 | `packages/shared/dist/`                      |
 
 ## 7. 迁移路径
 
 ### 7.1 第一阶段：基础结构
+
 1. 创建根 `package.json` 和 `pnpm-workspace.yaml`
 2. 创建共享配置文件
 3. 将 `meetkey-plugin` 移到 `packages/plugin`
 4. 调整依赖和路径
 
 ### 7.2 第二阶段：共享库
+
 1. 创建 `packages/shared` 包
 2. 提取共享类型定义和通信协议
 3. 更新现有包的依赖
 
 ### 7.3 第三阶段：新包
+
 1. 创建 `packages/browser-extension` 框架（使用 WXT）
 2. 创建 `packages/service` 框架（Tauri）
 3. 集成 WebSocket 通信

@@ -9,17 +9,20 @@
 ## 修改清单
 
 ### 1. `packages/shared/src/types/index.ts`
+
 - ✅ 新增 `ClientRole` 类型：`'plugin' | 'extension'`
 - ✅ 新增 `'register'` 到 `MessageType` 枚举
 - ✅ 新增 `RegisterMessage` 接口，用于客户端声明角色
 - ✅ 修改 `MeetDeviceStatus` 字段名：`lastUpdated` → `last_updated`（统一 snake_case）
 
 ### 2. `packages/shared/src/protocol/index.ts`
+
 - ✅ 导入新增的 `RegisterMessage` 和 `ClientRole` 类型
 - ✅ 新增 `MessageBuilder.createRegisterMessage(role: ClientRole)` 方法
 - ✅ 新增 `isRegisterMessage()` 类型守卫函数
 
 ### 3. `packages/service/src-tauri/src/websocket.rs`
+
 完整重写消息路由逻辑：
 
 - ✅ **客户端跟踪**：使用 `HashMap<String, (ClientInfo, ClientSender)>` 管理所有连接的客户端，每个客户端记录 ID 和角色
@@ -31,9 +34,11 @@
 - ✅ **Serde 配置**：使用 `#[serde(rename_all = "snake_case")]` 确保序列化为 snake_case 字段名
 
 ### 4. `packages/service/src-tauri/src/main.rs`
+
 - ✅ 注册 `WebSocketServer` 为 Tauri managed state（为后续扩展准备）
 
 ### 5. `docs/testing/websocat-test-cases.md` (新增)
+
 - ✅ 完整的 WebSocket 测试文档
 - ✅ 8 个测试场景，涵盖所有消息类型
 - ✅ 详细的步骤说明和预期结果
@@ -46,14 +51,14 @@
 
 ### 服务器行为总结
 
-| 消息类型 | 来源 | 服务器处理 | 目标 |
-|---------|------|---------|------|
-| `register` | 任意客户端 | 记录客户端角色 | 无 |
-| `command` | plugin | 转发 | 所有 extension |
-| `state-update` | extension | 更新状态 + 广播 | 所有 plugin |
-| `state-query` | 任意 | 查询当前状态 | 请求者 (state-response) |
-| `ping` | 任意 | 回复心跳 | 请求者 (pong) |
-| 其他 | 任意 | 忽略 | 无 |
+| 消息类型       | 来源       | 服务器处理      | 目标                    |
+| -------------- | ---------- | --------------- | ----------------------- |
+| `register`     | 任意客户端 | 记录客户端角色  | 无                      |
+| `command`      | plugin     | 转发            | 所有 extension          |
+| `state-update` | extension  | 更新状态 + 广播 | 所有 plugin             |
+| `state-query`  | 任意       | 查询当前状态    | 请求者 (state-response) |
+| `ping`         | 任意       | 回复心跳        | 请求者 (pong)           |
+| 其他           | 任意       | 忽略            | 无                      |
 
 ---
 
@@ -66,17 +71,17 @@
 ------------------------------------------------------------------
 T1   Plugin          → register(role=plugin)
 T2   Extension       → register(role=ext)
-T3   Plugin          → command(device=mic,    
+T3   Plugin          → command(device=mic,
                         action=toggle)
                                               转发 command 给 Extension
 T4   Extension       ← command 消息
      Extension       执行更改 Google Meet
-T5   Extension       → state-update(mic=off,  
+T5   Extension       → state-update(mic=off,
                         camera=on)
                                               更新状态 + 广播
 T6   Plugin1         ← state-update 消息
      Plugin2         ← state-update 消息      (同时广播给所有 plugin)
-     (多个 Plugin 
+     (多个 Plugin
       实例)
 ```
 
@@ -116,11 +121,13 @@ pnpm dev
 快速测试示例（4 个终端）：
 
 **终端 1 - Service：**
+
 ```bash
 cd packages/service && pnpm dev
 ```
 
 **终端 2 - Extension：**
+
 ```bash
 websocat ws://127.0.0.1:8080
 {"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"extension"}}
@@ -128,6 +135,7 @@ websocat ws://127.0.0.1:8080
 ```
 
 **终端 3 - Plugin：**
+
 ```bash
 websocat ws://127.0.0.1:8080
 {"id":"plugin-1","type":"register","timestamp":1234567890,"payload":{"role":"plugin"}}
@@ -135,6 +143,7 @@ websocat ws://127.0.0.1:8080
 ```
 
 **终端 4 - Plugin（发送命令）：**
+
 ```bash
 websocat ws://127.0.0.1:8080
 {"id":"plugin-2","type":"register","timestamp":1234567890,"payload":{"role":"plugin"}}
