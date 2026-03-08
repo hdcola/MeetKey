@@ -3,6 +3,10 @@ name = "meetkey-service"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "meetkey_service"
+path = "src-tauri/src/lib.rs"
+
 [[bin]]
 name = "meetkey-service"
 path = "src-tauri/src/main.rs"

@@ -6,7 +6,10 @@
     "dev": "tauri dev",
     "dev-frontend": "vite",
     "build-frontend": "vite build",
-    "build": "tauri build"
+    "build": "tauri build",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@meetkey/shared": "workspace:*",
@@ -19,6 +22,12 @@
     "@vitejs/plugin-vue": "^6.0.4",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
-    "vue-tsc": "^3.2.5"
+    "vue-tsc": "^3.2.5",
+    "vitest": "^2.0.5",
+    "@vue/test-utils": "^2.4.6",
+    "@vitest/ui": "^2.0.5",
+    "@vitest/coverage-v8": "^2.0.5",
+    "happy-dom": "^14.12.0",
+    "jsdom": "^25.0.0"
   }
 }

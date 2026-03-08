@@ -66,3 +66,5 @@ coverage/
 .vscode/
 !.vscode/extensions.json
 .history/
+
+GEMINI.md

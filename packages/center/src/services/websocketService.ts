@@ -24,17 +24,16 @@ export class WebSocketService {
   }
 
   private handleOpen() {
-    console.log('WebSocket connected')
+    console.log('✅ WebSocket connected to Center server')
     this.reconnectAttempts = 0
-    const store = useCenterStore()
-    store.setBrowserConnection('connected')
-    // Send initial handshake with proper structure
+    // Register Center UI as a client
     this.send({
-      id: `init-${Date.now()}`,
-      type: 'init',
+      id: `register-${Date.now()}`,
+      type: 'register',
       timestamp: Date.now(),
-      payload: { client: 'center' }
+      payload: { role: 'center' }
     })
+    console.log('📝 Center UI registered with server')
   }
 
   private handleMessage(event: MessageEvent) {
@@ -42,12 +41,22 @@ export class WebSocketService {
     
     try {
       const message = JSON.parse(event.data)
-      console.log('Received message:', message)
-
-      // Handle both 'type' (from frontend) and 'msg_type' (from backend)
       const messageType = message.type || message.msg_type
+      
+      // Log with more details
+      if (message.payload?.role) {
+        console.log(`📨 Received: ${messageType} (role: ${message.payload.role})`, message)
+      } else {
+        console.log(`📨 Received: ${messageType}`, message)
+      }
+
+      console.log(`🔍 Switch checking: "${messageType}"`)
 
       switch (messageType) {
+        case 'init':
+          // Ignore init messages (handshake)
+          break
+
         case 'state-update':
           if (message.payload) {
             const { microphone, camera } = message.payload
@@ -72,12 +81,14 @@ export class WebSocketService {
           }
           break
 
-        case 'plugin-connected':
-          store.setPluginConnection('connected')
+        case 'extension-connected':
+          console.log('✅ Extension confirmed as registered')
+          store.setBrowserConnection('connected')
           break
 
-        case 'plugin-disconnected':
-          store.setPluginConnection('disconnected')
+        case 'plugin-connected':
+          console.log('✅ Plugin confirmed as registered')
+          store.setPluginConnection('connected')
           break
 
         case 'browser-connected':
@@ -86,6 +97,14 @@ export class WebSocketService {
 
         case 'browser-disconnected':
           store.setBrowserConnection('disconnected')
+          break
+
+        case 'plugin-disconnected':
+          store.setPluginConnection('disconnected')
+          break
+
+        default:
+          console.log(`⚠️ Unknown message type: ${messageType}`, message)
           break
       }
     } catch (error) {

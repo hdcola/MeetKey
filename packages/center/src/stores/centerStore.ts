@@ -10,8 +10,8 @@ export const useCenterStore = defineStore('center', () => {
   const camera = ref<DeviceState>('unknown')
 
   // 连接状态
-  const pluginConnection = ref<ConnectionStatus>('initializing')
-  const browserConnection = ref<ConnectionStatus>('initializing')
+  const pluginConnection = ref<ConnectionStatus>('disconnected')
+  const browserConnection = ref<ConnectionStatus>('disconnected')
 
   // 计算属性
   const isMicrophoneOn = computed(() => microphone.value === 'on')

@@ -1,231 +1,85 @@
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{broadcast, Mutex};
-use tokio_tungstenite::{accept_async, tungstenite};
-use futures::stream::StreamExt;
-use futures::SinkExt;
+# Rust Backend Tests Implementation Plan
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeetDeviceStatus {
-    pub microphone: String, // "on", "off", "unknown"
-    pub camera: String,
-    pub last_updated: u64,
-}
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WebSocketMessage {
-    pub id: String,
-    #[serde(rename = "type")]
-    pub msg_type: String,
-    pub timestamp: u64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub payload: Option<serde_json::Value>,
-}
+**Goal:** Add comprehensive unit tests for `websocket.rs` with >80% statement coverage using simple mocks and `#[tokio::test]` macro.
 
-pub struct WebSocketServer {
-    addr: String,
-    current_state: Arc<Mutex<MeetDeviceStatus>>,
-    broadcast_tx: broadcast::Sender<WebSocketMessage>,
-}
+**Architecture:** Add inline `#[cfg(test)]` modules in `websocket.rs` with hand-written mock structs for TcpStream/WebSocketStream, test message builders, and organized test suites by message type. No external mock libraries.
 
-impl WebSocketServer {
-    pub fn new(port: u16) -> Self {
-        let addr = format!("127.0.0.1:{}", port);
-        let (broadcast_tx, _) = broadcast::channel(100);
+**Tech Stack:** 
+- Rust `#[cfg(test)]` + `#[tokio::test]` macro (built-in)
+- `tokio::sync::broadcast` for testing message routing
+- `serde_json` for message construction
+- Simple trait-based mocks (no `mockito`/`mockall`)
 
-        WebSocketServer {
-            addr,
-            current_state: Arc::new(Mutex::new(MeetDeviceStatus {
-                microphone: "unknown".to_string(),
-                camera: "unknown".to_string(),
-                last_updated: 0,
-            })),
-            broadcast_tx,
-        }
-    }
+---
 
-    pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let listener = TcpListener::bind(&self.addr).await?;
-        println!("WebSocket server listening on: {}", self.addr);
+## Task 1: Add test dependencies to Cargo.toml
 
-        loop {
-            let (stream, peer_addr) = listener.accept().await?;
-            println!("New connection from: {}", peer_addr);
+**Files:**
+- Modify: `packages/center/src-tauri/Cargo.toml`
 
-            let state = Arc::clone(&self.current_state);
-            let broadcast_tx = self.broadcast_tx.clone();
+**Step 1: Read current Cargo.toml to understand structure**
 
-            tokio::spawn(async move {
-                if let Err(e) = handle_connection(stream, state, broadcast_tx).await {
-                    eprintln!("Error handling connection: {}", e);
-                }
-            });
-        }
-    }
+Run: `cat packages/center/src-tauri/Cargo.toml`
 
-    pub async fn update_state(&self, status: MeetDeviceStatus) {
-        let mut state = self.current_state.lock().await;
-        *state = status.clone();
-    }
+Expected: See `[dependencies]` and `[features]` sections, no `[dev-dependencies]`
 
-    pub async fn get_state(&self) -> MeetDeviceStatus {
-        self.current_state.lock().await.clone()
-    }
-}
+**Step 2: Add dev-dependencies section**
 
-async fn handle_connection(
-    stream: TcpStream,
-    state: Arc<Mutex<MeetDeviceStatus>>,
-    broadcast_tx: broadcast::Sender<WebSocketMessage>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let ws_stream = accept_async(stream).await?;
-    let (mut write, mut read) = ws_stream.split();
+In `packages/center/src-tauri/Cargo.toml`, add after the `[features]` section:
 
-    let mut broadcast_rx = broadcast_tx.subscribe();
+```toml
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "rt", "sync"] }
+```
 
-    loop {
-        tokio::select! {
-            msg = read.next() => {
-                match msg {
-                    Some(Ok(tungstenite::Message::Text(text))) => {
-                        if let Ok(message) = serde_json::from_str::<WebSocketMessage>(&text) {
-                            // Extract role from payload for better logging
-                            let role_info = message.payload
-                                .as_ref()
-                                .and_then(|p| p.get("role"))
-                                .and_then(|r| r.as_str())
-                                .map(|r| format!(" (role: {})", r))
-                                .unwrap_or_default();
-                            println!("📨 Received message type: {}{}", message.msg_type, role_info);
-                            
-                            match message.msg_type.as_str() {
-                                "register" => {
-                                    eprintln!("🔍 DEBUG: Processing register message");
-                                    // Handle client registration
-                                    if let Some(payload) = &message.payload {
-                                        eprintln!("🔍 DEBUG: Payload found: {:?}", payload);
-                                        if let Some(role) = payload.get("role").and_then(|r| r.as_str()) {
-                                            println!("✅ Client registered as: {}", role);
-                                            
-                                            if role != "center" {
-                                                // Send confirmation back to client
-                                            let confirmation = WebSocketMessage {
-                                                id: format!("{}-confirm", message.id),
-                                                msg_type: format!("{}-connected", role),
-                                                timestamp: std::time::SystemTime::now()
-                                                    .duration_since(std::time::UNIX_EPOCH)
-                                                    .unwrap()
-                                                    .as_millis() as u64,
-                                                payload: Some(serde_json::json!({ "status": "registered" })),
-                                            };
-                                            println!("📤 Sending confirmation: {}", confirmation.msg_type);
-                                            let confirm_json = serde_json::to_string(&confirmation).unwrap();
-                                            eprintln!("🔍 DEBUG: Sending JSON: {}", confirm_json);
-                                            match write.send(tungstenite::Message::Text(confirm_json)).await {
-                                                Ok(_) => eprintln!("✅ DEBUG: Confirmation sent successfully"),
-                                                Err(e) => eprintln!("❌ DEBUG: Failed to send confirmation: {}", e),
-                                            }
-                                            
-                                            // Also broadcast to all other clients so they know this role connected
-                                            let broadcast_msg = WebSocketMessage {
-                                                id: format!("{}-broadcast", message.id),
-                                                msg_type: format!("{}-connected", role),
-                                                timestamp: std::time::SystemTime::now()
-                                                    .duration_since(std::time::UNIX_EPOCH)
-                                                    .unwrap()
-                                                    .as_millis() as u64,
-                                                payload: Some(serde_json::json!({ "status": "registered" })),
-                                            };
-                                            println!("📢 Broadcasting: {}", broadcast_msg.msg_type);
-                                            let _ = broadcast_tx.send(broadcast_msg);
-                                            } else {
-                                                println!("🎛️ Center UI connected");
-                                            }
-                                        }
-                                    }
-                                }
-                                "state-update" => {
-                                    // Update server state
-                                    if let Some(payload) = &message.payload {
-                                        if let Ok(status) = serde_json::from_value::<MeetDeviceStatus>(payload.clone()) {
-                                            let mut s = state.lock().await;
-                                            *s = status;
-                                            println!("✅ State updated: {:?}", s);
-                                        }
-                                    }
-                                    // Broadcast state update to all clients
-                                    let _ = broadcast_tx.send(message);
-                                }
-                                "state-query" => {
-                                    // Handle state query - send current state back to client
-                                    let current_state = state.lock().await;
-                                    let response = WebSocketMessage {
-                                        id: message.id.clone(),
-                                        msg_type: "state-response".to_string(),
-                                        timestamp: std::time::SystemTime::now()
-                                            .duration_since(std::time::UNIX_EPOCH)
-                                            .unwrap()
-                                            .as_millis() as u64,
-                                        payload: Some(serde_json::to_value(&*current_state).unwrap()),
-                                    };
-                                    println!("📤 Sending state-response: {:?}", response);
-                                    let _ = write.send(tungstenite::Message::Text(
-                                        serde_json::to_string(&response).unwrap()
-                                    )).await;
-                                    drop(current_state);
-                                }
-                                _ => {
-                                    // Broadcast other message types to all clients
-                                    let _ = broadcast_tx.send(message);
-                                }
-                            }
-                        }
-                    }
-                    Some(Ok(tungstenite::Message::Binary(_))) => {
-                        // Handle binary messages if needed
-                    }
-                    Some(Ok(tungstenite::Message::Ping(data))) => {
-                        // Respond to ping with pong
-                        let _ = write.send(tungstenite::Message::Pong(data)).await;
-                    }
-                    Some(Ok(tungstenite::Message::Pong(_))) => {
-                        // Handle pong
-                    }
-                    Some(Ok(tungstenite::Message::Close(_))) => {
-                        println!("Connection closed");
-                        break;
-                    }
-                    Some(Ok(tungstenite::Message::Frame(_))) => {
-                        // Handle frame if needed
-                    }
-                    Some(Err(e)) => {
-                        eprintln!("WebSocket error: {}", e);
-                        break;
-                    }
-                    None => break,
-                }
-            }
-            Ok(msg) = broadcast_rx.recv() => {
-                // Forward broadcast messages to all clients
-                if let Ok(text) = serde_json::to_string(&msg) {
-                    let _ = write.send(tungstenite::Message::Text(text)).await;
-                }
-            }
-        }
-    }
+(Note: tokio already in main dependencies, but we need to ensure "sync" feature is available for tests)
 
-    Ok(())
-}
+**Step 3: Verify Cargo.toml is valid**
 
+Run: `cd packages/center/src-tauri && cargo check`
+
+Expected: SUCCESS (no compilation errors)
+
+**Step 4: Commit**
+
+```bash
+cd packages/center/src-tauri
+git add Cargo.toml
+git commit -m "build: add dev-dependencies for backend tests"
+```
+
+---
+
+## Task 2: Add mock trait and MockWebSocketStream struct
+
+**Files:**
+- Modify: `packages/center/src-tauri/src/websocket.rs` (add at end before closing brace, around line 200+)
+
+**Step 1: Review websocket.rs structure**
+
+Run: `wc -l packages/center/src-tauri/src/websocket.rs`
+
+Expected: Should show ~200+ lines
+
+Read the last 30 lines to see where to add tests:
+Run: `tail -30 packages/center/src-tauri/src/websocket.rs`
+
+**Step 2: Add mock trait definition after main code**
+
+At the end of `websocket.rs`, before the closing brace, add:
+
+```rust
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::Arc;
     use tokio::sync::Mutex;
+    use futures::stream::StreamExt;
+    use futures::SinkExt;
 
     /// Mock WebSocket stream for testing - captures sent messages and allows injecting received ones
-    #[allow(dead_code)]
     struct MockWebSocketStream {
         /// Messages that were sent through this stream
         pub sent_messages: Arc<Mutex<Vec<String>>>,
@@ -234,7 +88,6 @@ mod tests {
     }
 
     impl MockWebSocketStream {
-        #[allow(dead_code)]
         fn new() -> Self {
             MockWebSocketStream {
                 sent_messages: Arc::new(Mutex::new(Vec::new())),
@@ -243,19 +96,16 @@ mod tests {
         }
 
         /// Queue a message to be received
-        #[allow(dead_code)]
         async fn queue_recv(&self, msg: String) {
             self.recv_queue.lock().await.push(msg);
         }
 
         /// Get all messages that were sent
-        #[allow(dead_code)]
         async fn get_sent_messages(&self) -> Vec<String> {
             self.sent_messages.lock().await.clone()
         }
 
         /// Get the last sent message
-        #[allow(dead_code)]
         async fn last_sent(&self) -> Option<String> {
             self.sent_messages.lock().await.last().cloned()
         }
@@ -322,8 +172,35 @@ mod tests {
             serde_json::to_string(&msg).unwrap()
         }
     }
+}
+```
 
-    // TASK 3: WebSocketServer Initialization Tests
+**Step 3: Run cargo check to verify compilation**
+
+Run: `cd packages/center/src-tauri && cargo check`
+
+Expected: SUCCESS (compiles with new test module)
+
+**Step 4: Commit**
+
+```bash
+cd packages/center/src-tauri
+git add src/websocket.rs
+git commit -m "test: add mock stream and message builder utilities"
+```
+
+---
+
+## Task 3: Add WebSocketServer initialization tests
+
+**Files:**
+- Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
+
+**Step 1: Add test for WebSocketServer::new()**
+
+Inside the `#[cfg(test)] mod tests` block, add before the closing brace of the `tests` module:
+
+```rust
     #[test]
     fn test_websocket_server_new() {
         let server = WebSocketServer::new(8080);
@@ -340,26 +217,52 @@ mod tests {
     async fn test_websocket_server_initial_state() {
         let server = WebSocketServer::new(8080);
         let state = server.get_state().await;
-
+        
         assert_eq!(state.microphone, "unknown");
         assert_eq!(state.camera, "unknown");
         assert_eq!(state.last_updated, 0);
     }
+```
 
-    // TASK 4: State Management Tests
+**Step 2: Run the tests**
+
+Run: `cd packages/center/src-tauri && cargo test --lib test_websocket_server`
+
+Expected: All 3 tests PASS
+
+**Step 3: Commit**
+
+```bash
+cd packages/center/src-tauri
+git add src/websocket.rs
+git commit -m "test: add WebSocketServer initialization tests"
+```
+
+---
+
+## Task 4: Add state management tests
+
+**Files:**
+- Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
+
+**Step 1: Add update_state and get_state tests**
+
+Inside the `#[cfg(test)] mod tests` block, add:
+
+```rust
     #[tokio::test]
     async fn test_update_state() {
         let server = WebSocketServer::new(8080);
-
+        
         let new_state = MeetDeviceStatus {
             microphone: "on".to_string(),
             camera: "off".to_string(),
             last_updated: 12345,
         };
-
+        
         server.update_state(new_state.clone()).await;
         let state = server.get_state().await;
-
+        
         assert_eq!(state.microphone, "on");
         assert_eq!(state.camera, "off");
         assert_eq!(state.last_updated, 12345);
@@ -368,22 +271,24 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_state_updates() {
         let server = WebSocketServer::new(8080);
-
+        
+        // First update
         server.update_state(MeetDeviceStatus {
             microphone: "on".to_string(),
             camera: "on".to_string(),
             last_updated: 1000,
         }).await;
-
+        
         let state1 = server.get_state().await;
         assert_eq!(state1.microphone, "on");
-
+        
+        // Second update
         server.update_state(MeetDeviceStatus {
             microphone: "off".to_string(),
             camera: "on".to_string(),
             last_updated: 2000,
         }).await;
-
+        
         let state2 = server.get_state().await;
         assert_eq!(state2.microphone, "off");
         assert_eq!(state2.last_updated, 2000);
@@ -392,13 +297,14 @@ mod tests {
     #[tokio::test]
     async fn test_concurrent_state_reads() {
         let server = Arc::new(WebSocketServer::new(8080));
-
+        
         server.update_state(MeetDeviceStatus {
             microphone: "on".to_string(),
             camera: "on".to_string(),
             last_updated: 999,
         }).await;
-
+        
+        // Spawn 5 concurrent reads
         let mut handles = vec![];
         for _ in 0..5 {
             let server_clone = Arc::clone(&server);
@@ -407,14 +313,41 @@ mod tests {
             });
             handles.push(handle);
         }
-
+        
+        // Wait for all and verify they all got the same state
         for handle in handles {
             let state = handle.await.unwrap();
             assert_eq!(state.microphone, "on");
         }
     }
+```
 
-    // TASK 5: WebSocketMessage Parsing Tests
+**Step 2: Run the tests**
+
+Run: `cd packages/center/src-tauri && cargo test --lib test_update_state test_multiple test_concurrent`
+
+Expected: All 3 tests PASS
+
+**Step 3: Commit**
+
+```bash
+cd packages/center/src-tauri
+git add src/websocket.rs
+git commit -m "test: add state management tests"
+```
+
+---
+
+## Task 5: Add WebSocketMessage parsing tests
+
+**Files:**
+- Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
+
+**Step 1: Add message parsing tests**
+
+Inside the `#[cfg(test)] mod tests` block, add:
+
+```rust
     #[test]
     fn test_websocket_message_serialization() {
         let msg = WebSocketMessage {
@@ -423,10 +356,10 @@ mod tests {
             timestamp: 1234567890,
             payload: Some(serde_json::json!({ "role": "plugin" })),
         };
-
+        
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: WebSocketMessage = serde_json::from_str(&json).unwrap();
-
+        
         assert_eq!(parsed.id, "test-123");
         assert_eq!(parsed.msg_type, "register");
         assert_eq!(parsed.payload.unwrap()["role"], "plugin");
@@ -436,7 +369,7 @@ mod tests {
     fn test_websocket_message_without_payload() {
         let json = r#"{"id":"test","type":"state-query","timestamp":123,"payload":null}"#;
         let msg: WebSocketMessage = serde_json::from_str(json).unwrap();
-
+        
         assert_eq!(msg.msg_type, "state-query");
         assert!(msg.payload.is_none());
     }
@@ -445,7 +378,7 @@ mod tests {
     fn test_invalid_json_parsing() {
         let invalid = "{invalid json}";
         let result: Result<WebSocketMessage, _> = serde_json::from_str(invalid);
-
+        
         assert!(result.is_err());
     }
 
@@ -453,11 +386,37 @@ mod tests {
     fn test_missing_required_fields() {
         let incomplete = r#"{"id":"test"}"#;
         let result: Result<WebSocketMessage, _> = serde_json::from_str(incomplete);
-
+        
         assert!(result.is_err());
     }
+```
 
-    // TASK 6: MeetDeviceStatus Tests
+**Step 2: Run the tests**
+
+Run: `cd packages/center/src-tauri && cargo test --lib test_websocket_message`
+
+Expected: All 4 tests PASS
+
+**Step 3: Commit**
+
+```bash
+cd packages/center/src-tauri
+git add src/websocket.rs
+git commit -m "test: add message parsing and deserialization tests"
+```
+
+---
+
+## Task 6: Add MeetDeviceStatus tests
+
+**Files:**
+- Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
+
+**Step 1: Add device status tests**
+
+Inside the `#[cfg(test)] mod tests` block, add:
+
+```rust
     #[test]
     fn test_meet_device_status_serialization() {
         let status = MeetDeviceStatus {
@@ -465,10 +424,10 @@ mod tests {
             camera: "off".to_string(),
             last_updated: 1234567890,
         };
-
+        
         let json = serde_json::to_string(&status).unwrap();
         let parsed: MeetDeviceStatus = serde_json::from_str(&json).unwrap();
-
+        
         assert_eq!(parsed.microphone, "on");
         assert_eq!(parsed.camera, "off");
         assert_eq!(parsed.last_updated, 1234567890);
@@ -481,7 +440,7 @@ mod tests {
             camera: "unknown".to_string(),
             last_updated: 0,
         };
-
+        
         assert_eq!(status.microphone, "unknown");
         assert_eq!(status.camera, "unknown");
     }
@@ -493,17 +452,43 @@ mod tests {
             camera: "off".to_string(),
             last_updated: 999,
         };
-
+        
         let status2 = status1.clone();
         assert_eq!(status1.microphone, status2.microphone);
     }
+```
 
-    // TASK 7: TestMessageBuilder Tests
+**Step 2: Run the tests**
+
+Run: `cd packages/center/src-tauri && cargo test --lib test_meet_device_status`
+
+Expected: All 3 tests PASS
+
+**Step 3: Commit**
+
+```bash
+cd packages/center/src-tauri
+git add src/websocket.rs
+git commit -m "test: add device status serialization tests"
+```
+
+---
+
+## Task 7: Add TestMessageBuilder validation tests
+
+**Files:**
+- Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
+
+**Step 1: Add message builder tests**
+
+Inside the `#[cfg(test)] mod tests` block, add:
+
+```rust
     #[test]
     fn test_message_builder_register() {
         let msg_json = TestMessageBuilder::register("plugin");
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-
+        
         assert_eq!(msg.msg_type, "register");
         assert_eq!(msg.payload.unwrap()["role"], "plugin");
     }
@@ -512,7 +497,7 @@ mod tests {
     fn test_message_builder_register_center() {
         let msg_json = TestMessageBuilder::register("center");
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-
+        
         assert_eq!(msg.payload.unwrap()["role"], "center");
     }
 
@@ -520,7 +505,7 @@ mod tests {
     fn test_message_builder_state_update() {
         let msg_json = TestMessageBuilder::state_update("on", "off");
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-
+        
         assert_eq!(msg.msg_type, "state-update");
         let payload = msg.payload.unwrap();
         assert_eq!(payload["microphone"], "on");
@@ -531,7 +516,7 @@ mod tests {
     fn test_message_builder_state_query() {
         let msg_json = TestMessageBuilder::state_query();
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-
+        
         assert_eq!(msg.msg_type, "state-query");
         assert!(msg.payload.is_none());
     }
@@ -540,7 +525,7 @@ mod tests {
     fn test_message_builder_invalid_json() {
         let invalid = TestMessageBuilder::invalid_json();
         let result: Result<WebSocketMessage, _> = serde_json::from_str(&invalid);
-
+        
         assert!(result.is_err());
     }
 
@@ -548,14 +533,42 @@ mod tests {
     fn test_message_builder_missing_role() {
         let msg_json = TestMessageBuilder::missing_role();
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-
+        
+        // Message parses, but role is missing
         assert!(msg.payload.unwrap().get("role").is_none());
     }
+```
 
-    // TASK 8: Broadcast Channel Tests
+**Step 2: Run the tests**
+
+Run: `cd packages/center/src-tauri && cargo test --lib test_message_builder`
+
+Expected: All 6 tests PASS
+
+**Step 3: Commit**
+
+```bash
+cd packages/center/src-tauri
+git add src/websocket.rs
+git commit -m "test: add message builder utility tests"
+```
+
+---
+
+## Task 8: Add broadcast channel tests
+
+**Files:**
+- Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
+
+**Step 1: Add broadcast functionality tests**
+
+Inside the `#[cfg(test)] mod tests` block, add:
+
+```rust
     #[tokio::test]
     async fn test_broadcast_channel_creation() {
         let server = WebSocketServer::new(8080);
+        // Server creates a broadcast channel internally, just verify it initializes
         let state = server.get_state().await;
         assert_eq!(state.microphone, "unknown");
     }
@@ -563,17 +576,18 @@ mod tests {
     #[tokio::test]
     async fn test_broadcast_single_message() {
         let (_tx, mut rx) = tokio::sync::broadcast::channel(10);
-
+        
         let msg = WebSocketMessage {
             id: "test".to_string(),
             msg_type: "test".to_string(),
             timestamp: 0,
             payload: None,
         };
-
+        
         let _tx_clone = _tx.clone();
         let _ = _tx_clone.send(msg.clone());
-
+        
+        // Verify a message can be sent/received on broadcast
         if let Ok(received) = rx.recv().await {
             assert_eq!(received.id, "test");
         }
@@ -582,25 +596,242 @@ mod tests {
     #[tokio::test]
     async fn test_broadcast_multiple_subscribers() {
         let (tx, _) = tokio::sync::broadcast::channel(10);
-
+        
         let mut rx1 = tx.subscribe();
         let mut rx2 = tx.subscribe();
-
+        
         let msg = WebSocketMessage {
             id: "multi-test".to_string(),
             msg_type: "broadcast-test".to_string(),
             timestamp: 0,
             payload: None,
         };
-
+        
         let _ = tx.send(msg.clone());
-
+        
+        // Both subscribers should receive
         if let Ok(msg1) = rx1.recv().await {
             assert_eq!(msg1.id, "multi-test");
         }
-
+        
         if let Ok(msg2) = rx2.recv().await {
             assert_eq!(msg2.id, "multi-test");
         }
     }
-}
+```
+
+**Step 2: Run the tests**
+
+Run: `cd packages/center/src-tauri && cargo test --lib test_broadcast`
+
+Expected: All 3 tests PASS
+
+**Step 3: Commit**
+
+```bash
+cd packages/center/src-tauri
+git add src/websocket.rs
+git commit -m "test: add broadcast channel tests"
+```
+
+---
+
+## Task 9: Run full test suite and check coverage
+
+**Files:**
+- Check: `packages/center/src-tauri/src/websocket.rs`
+
+**Step 1: Run all backend tests**
+
+Run: `cd packages/center/src-tauri && cargo test --lib 2>&1`
+
+Expected: All tests PASS (count should be 20+)
+
+**Step 2: Check test coverage with tarpaulin**
+
+First, install tarpaulin if not already present:
+```bash
+cargo install cargo-tarpaulin
+```
+
+Then run coverage:
+```bash
+cd packages/center/src-tauri && cargo tarpaulin --lib --out Html --output-dir target/coverage
+```
+
+Expected: Should generate HTML coverage report in `target/coverage/index.html`
+
+**Step 3: Review coverage report**
+
+Run: `cd packages/center/src-tauri && cargo tarpaulin --lib --out Stdout`
+
+Expected: Should show coverage >80% for websocket.rs
+
+**Step 4: Commit all test changes**
+
+```bash
+cd packages/center/src-tauri
+git add src/websocket.rs
+git commit -m "test: complete backend test suite with comprehensive coverage"
+```
+
+---
+
+## Task 10: Add backend tests to CI and documentation
+
+**Files:**
+- Create: `docs/testing/backend-tests.md`
+- Modify: `package.json` (root)
+- Modify: `packages/center/package.json`
+
+**Step 1: Create backend testing documentation**
+
+Create `docs/testing/backend-tests.md`:
+
+```markdown
+# Backend Tests - Rust WebSocket Server
+
+## Overview
+
+Backend tests for `packages/center/src-tauri/src/websocket.rs` use Rust's built-in testing infrastructure with `#[tokio::test]` macro for async code.
+
+## Running Tests
+
+### Run all backend tests
+\`\`\`bash
+cd packages/center/src-tauri
+cargo test --lib
+\`\`\`
+
+### Run specific test
+\`\`\`bash
+cargo test --lib test_websocket_server_new
+\`\`\`
+
+### Run with output
+\`\`\`bash
+cargo test --lib -- --nocapture
+\`\`\`
+
+## Coverage
+
+Check coverage with tarpaulin:
+\`\`\`bash
+cargo tarpaulin --lib --out Stdout
+\`\`\`
+
+Target: >80% statement coverage
+
+## Test Organization
+
+Tests are organized in `#[cfg(test)]` module in `websocket.rs`:
+
+- **Server initialization**: `test_websocket_server_*`
+- **State management**: `test_update_state`, `test_concurrent_*`
+- **Message handling**: `test_websocket_message_*`, `test_message_builder_*`
+- **Device status**: `test_meet_device_status_*`
+- **Broadcasting**: `test_broadcast_*`
+
+## Mock Strategy
+
+Simple hand-written mocks, no external libraries:
+- `MockWebSocketStream` - simulates WebSocket I/O
+- `TestMessageBuilder` - constructs valid/invalid test messages
+
+## Future: Integration Tests
+
+Phase 2 will add integration tests with real TCP connections.
+```
+
+**Step 2: Add test scripts to root package.json**
+
+In root `package.json`, update scripts section to add:
+
+```json
+"test:backend": "cd packages/center/src-tauri && cargo test --lib",
+"test:backend:coverage": "cd packages/center/src-tauri && cargo tarpaulin --lib --out Stdout",
+```
+
+**Step 3: Verify scripts work**
+
+Run: `cd /Users/hd/work/prj/MeetKey && pnpm test:backend`
+
+Expected: All backend tests pass
+
+**Step 4: Commit documentation**
+
+```bash
+git add docs/testing/backend-tests.md package.json packages/center/package.json
+git commit -m "docs: add backend testing guide and scripts"
+```
+
+---
+
+## Task 11: Verify all tests pass and create summary
+
+**Files:**
+- Check: All test files
+
+**Step 1: Run complete test suite (frontend + backend)**
+
+Run both:
+```bash
+cd /Users/hd/work/prj/MeetKey
+pnpm test:center           # Frontend tests
+pnpm test:backend          # Backend tests
+```
+
+Expected: All tests PASS (frontend: 66 tests, backend: 20+ tests)
+
+**Step 2: Verify coverage metrics**
+
+Frontend:
+```bash
+pnpm test:center:coverage 2>&1 | grep "% Stmts"
+```
+
+Expected: >80%
+
+Backend:
+```bash
+cd packages/center/src-tauri && cargo tarpaulin --lib --out Stdout | grep "Total"
+```
+
+Expected: >80%
+
+**Step 3: Create summary commit**
+
+```bash
+git add -A
+git commit -m "test: complete frontend and backend test suite
+
+- Frontend: 66 tests, 88.83% coverage
+- Backend: 20+ tests, >80% coverage
+- Full websocket.rs unit test coverage with mocks
+- Ready for integration tests phase"
+```
+
+---
+
+## Success Criteria
+
+✅ **All 20+ backend tests pass**  
+✅ **Statement coverage >80%**  
+✅ **Tests run in <10 seconds total**  
+✅ **No external mock libraries required**  
+✅ **Tests integrated with CI/CD scripts**  
+✅ **Documentation complete**  
+
+## Notes
+
+- All tests use inline `#[cfg(test)]` modules in websocket.rs
+- Use `#[tokio::test]` for async functions
+- SimpleMessageBuilder provides test data (no factories needed)
+- Broadcast channel testing verifies multi-client scenarios
+- Future phases can add real TCP/WebSocket integration tests
+
+---
+
+**Plan Complete**
+
+This plan creates comprehensive unit test coverage for the Rust backend with simple mocks, achieving >80% coverage target to match frontend testing standards.

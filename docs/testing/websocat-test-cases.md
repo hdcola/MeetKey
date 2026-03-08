@@ -21,16 +21,33 @@ cargo install websocat
 cargo install websocat
 ```
 
-### 启动 Service
+### 启动 Center
 
 在项目根目录运行：
 
 ```bash
-cd packages/service
+cd packages/center
 pnpm dev
 ```
 
-WebSocket 服务器将在 `ws://127.0.0.1:8080` 上监听。
+WebSocket 服务器将在 `ws://127.0.0.1:8080` 上监听。Center UI 会自动注册为 `'center'` 身份。
+
+---
+
+## 客户端角色说明
+
+MeetKey Center 支持三种客户端角色：
+
+| 角色 | 描述 | 用途 |
+|------|------|------|
+| **center** | MeetKey Center UI（自动注册） | 中心控制面板，接收所有事件 |
+| **plugin** | Stream Deck 硬件插件 | 接收状态更新，发送命令 |
+| **extension** | Browser Extension（Google Meet） | 执行控制，发送状态更新 |
+
+**消息流：**
+- Plugin 发送 `command` → 转发给所有 Extension
+- Extension 发送 `state-update` → 广播给所有 Plugin 和 Center
+- Center 始终接收所有广播消息
 
 ---
 
@@ -93,6 +110,29 @@ websocat ws://127.0.0.1:8080
 **预期：**
 - 消息成功发送
 - Service 日志输出：`Client {id} registered as: extension`
+
+**清理：** 按 `Ctrl+C` 关闭连接
+
+---
+
+### 场景 2.5：Center 身份注册（新增）
+
+**目标：** Center UI 客户端成功注册自己的身份。
+
+**步骤：**
+
+在新终端中模拟 Center UI 的注册：
+
+```bash
+websocat ws://127.0.0.1:8080
+{"id":"center-1","type":"register","timestamp":1234567890,"payload":{"role":"center"}}
+```
+
+**预期：**
+- 消息成功发送
+- Center UI 在后端日志中显示：`Client registered as: center`
+- Center UI 在后端日志中显示：`🎛️ Center UI connected`
+- 注意：Center 不会收到确认消息，但会接收后续的所有广播
 
 **清理：** 按 `Ctrl+C` 关闭连接
 
@@ -233,12 +273,14 @@ websocat ws://127.0.0.1:8080
 
 下面是一个完整的多终端测试流程。建议打开 4 个终端窗口分别运行以下命令。
 
-### 终端 1 - Service 启动
+### 终端 1 - Center 启动
 
 ```bash
-cd packages/service
+cd packages/center
 pnpm dev
 ```
+
+Center UI 会自动连接并注册为 `'center'` 身份。
 
 ### 终端 2 - Extension 客户端
 
@@ -290,32 +332,53 @@ websocat ws://127.0.0.1:8080
 ### 预期的消息流
 
 ```
+Center UI 连接后：
+  📨 Received message type: register (role: center)
+  ✅ Client registered as: center
+  🎛️ Center UI connected
+
 Extension 终端：
   发送: register (as extension)
+  接收: extension-connected (确认)
   发送: state-update {microphone: "on", camera: "on"}
-  接收: command {device: "microphone", action: "toggle"}
 
 Plugin 1 终端：
   发送: register (as plugin)
+  接收: plugin-connected (确认)
   接收: state-update {microphone: "on", camera: "on"}
   发送: state-query
   接收: state-response {microphone: "on", camera: "on"}
 
 Plugin 2 终端：
   发送: register (as plugin)
+  接收: plugin-connected (确认)
   发送: command {device: "microphone", action: "toggle"}
   接收: state-update {microphone: "on", camera: "on"}
 
-Service 日志：
+Server 日志：
+  WebSocket server listening on: 127.0.0.1:8080
+  New connection from: 127.0.0.1:xxxxx (Center UI)
+  📨 Received message type: register (role: center)
+  ✅ Client registered as: center
+  🎛️ Center UI connected
+  
   New connection from: 127.0.0.1:xxxxx (Extension)
-  Client {ext-id} registered as: extension
+  📨 Received message type: register (role: extension)
+  ✅ Client registered as: extension
+  📤 Sending confirmation: extension-connected
+  📢 Broadcasting: extension-connected
+  
   New connection from: 127.0.0.1:xxxxx (Plugin 1)
-  Client {plugin-1-id} registered as: plugin
-  New connection from: 127.0.0.1:xxxxx (Plugin 2)
-  Client {plugin-2-id} registered as: plugin
-  Client {plugin-2-id} sent command to all extensions
+  📨 Received message type: register (role: plugin)
+  ✅ Client registered as: plugin
+  📤 Sending confirmation: plugin-connected
+  📢 Broadcasting: plugin-connected
   ...
 ```
+
+Center UI 会实时显示连接状态：
+- Extension 注册后，"Browser" 指示灯 🟢 变绿
+- Plugin 注册后，"Plugin" 指示灯 🟢 变绿
 
 ---
 
