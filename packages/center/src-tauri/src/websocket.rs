@@ -574,9 +574,8 @@ mod tests {
         let _tx_clone = _tx.clone();
         let _ = _tx_clone.send(msg.clone());
 
-        if let Ok(received) = rx.recv().await {
-            assert_eq!(received.id, "test");
-        }
+        let received = rx.recv().await.expect("Should receive broadcasted message");
+        assert_eq!(received.id, "test");
     }
 
     #[tokio::test]
@@ -595,12 +594,10 @@ mod tests {
 
         let _ = tx.send(msg.clone());
 
-        if let Ok(msg1) = rx1.recv().await {
-            assert_eq!(msg1.id, "multi-test");
-        }
+        let msg1 = rx1.recv().await.expect("Subscriber 1 should receive message");
+        assert_eq!(msg1.id, "multi-test");
 
-        if let Ok(msg2) = rx2.recv().await {
-            assert_eq!(msg2.id, "multi-test");
-        }
+        let msg2 = rx2.recv().await.expect("Subscriber 2 should receive message");
+        assert_eq!(msg2.id, "multi-test");
     }
 }

@@ -1,18 +1,13 @@
 {
+  "productName": "MeetKey Center",
+  "version": "0.1.0",
+  "identifier": "com.meetkey.center",
   "build": {
     "beforeDevCommand": "pnpm dev-frontend",
     "beforeBuildCommand": "pnpm build-frontend",
-    "devUrl": "http://localhost:5173"
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
   },
-  "bundle": {
-    "active": true,
-    "targets": "all"
-  },
-  "productName": "meetkey-center",
-  "mainBinaryName": "meetkey-center",
-  "version": "0.1.0",
-  "identifier": "com.meetkey.center",
-  "plugins": {},
   "app": {
     "windows": [
       {
@@ -20,8 +15,7 @@
         "width": 320,
         "height": 320,
         "resizable": true,
-        "fullscreen": false,
-        "useHttpsScheme": true
+        "fullscreen": false
       }
     ],
     "security": {
