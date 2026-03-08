@@ -1,0 +1,21 @@
+{
+  "build": {
+    "beforeDevCommand": "pnpm dev-frontend",
+    "beforeBuildCommand": "pnpm build-frontend",
+    "devPath": "http://localhost:5173"
+  },
+  "tauri": {
+    "windows": [
+      {
+        "title": "MeetKey Center",
+        "width": 320,
+        "height": 320,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

@@ -68,3 +68,5 @@ coverage/
 .history/
 
 GEMINI.md
+.claude/settings.local.json
+.serena/memories/
