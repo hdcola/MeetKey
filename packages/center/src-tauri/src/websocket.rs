@@ -108,8 +108,7 @@ async fn handle_connection(
                                         if let Some(role) = payload.get("role").and_then(|r| r.as_str()) {
                                             println!("✅ Client registered as: {}", role);
 
-                                            if role != "center" {
-                                                // Send confirmation back to client
+                                            // Send confirmation back to client
                                             let confirmation = WebSocketMessage {
                                                 id: format!("{}-confirm", message.id),
                                                 msg_type: format!("{}-connected", role),
@@ -121,26 +120,25 @@ async fn handle_connection(
                                             };
                                             println!("📤 Sending confirmation: {}", confirmation.msg_type);
                                             let confirm_json = serde_json::to_string(&confirmation).unwrap();
-                                            eprintln!("🔍 DEBUG: Sending JSON: {}", confirm_json);
+                                            
                                             match write.send(tungstenite::Message::Text(confirm_json)).await {
-                                                Ok(_) => eprintln!("✅ DEBUG: Confirmation sent successfully"),
-                                                Err(e) => eprintln!("❌ DEBUG: Failed to send confirmation: {}", e),
+                                                Ok(_) => println!("✅ Confirmation sent to {}", role),
+                                                Err(e) => eprintln!("❌ Failed to send confirmation to {}: {}", role, e),
                                             }
 
-                                            // Also broadcast to all other clients so they know this role connected
-                                            let broadcast_msg = WebSocketMessage {
-                                                id: format!("{}-broadcast", message.id),
-                                                msg_type: format!("{}-connected", role),
-                                                timestamp: std::time::SystemTime::now()
-                                                    .duration_since(std::time::UNIX_EPOCH)
-                                                    .unwrap()
-                                                    .as_millis() as u64,
-                                                payload: Some(serde_json::json!({ "status": "registered" })),
-                                            };
-                                            println!("📢 Broadcasting: {}", broadcast_msg.msg_type);
-                                            let _ = broadcast_tx.send(broadcast_msg);
-                                            } else {
-                                                println!("🎛️ Center UI connected");
+                                            // Only broadcast to others for non-center roles
+                                            if role != "center" {
+                                                let broadcast_msg = WebSocketMessage {
+                                                    id: format!("{}-broadcast", message.id),
+                                                    msg_type: format!("{}-connected", role),
+                                                    timestamp: std::time::SystemTime::now()
+                                                        .duration_since(std::time::UNIX_EPOCH)
+                                                        .unwrap()
+                                                        .as_millis() as u64,
+                                                    payload: Some(serde_json::json!({ "status": "registered" })),
+                                                };
+                                                println!("📢 Broadcasting: {}", broadcast_msg.msg_type);
+                                                let _ = broadcast_tx.send(broadcast_msg);
                                             }
                                         }
                                     }
