@@ -10,7 +10,7 @@
     "test": "pnpm run test:frontend:ci && pnpm run test:backend",
     "test:frontend": "vitest",
     "test:frontend:ci": "vitest run",
-    "test:e2e": "vitest run src/__tests__/*.e2e.test.ts",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:all": "pnpm run test && pnpm run test:e2e",
     "test:backend": "node -e \"require('fs').mkdirSync('dist', { recursive: true })\" && cd src-tauri && cargo test --lib",
     "test:ui": "vitest --ui",
@@ -35,6 +35,7 @@
     "vite": "^7.3.1",
     "vitest": "^2.0.5",
     "vue-tsc": "^3.2.5",
+    "wait-on": "^9.0.4",
     "ws": "^8.19.0"
   }
 }

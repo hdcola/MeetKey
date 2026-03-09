@@ -85,11 +85,20 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
   it('应该在不同客户端之间广播状态更新 (state-update)', async () => {
     const extension = await createRegisteredClient('browser-extension');
     const plugin = await createRegisteredClient('plugin');
+    const center = await createRegisteredClient('center');
 
-    const broadcastPromise = new Promise<any>((resolve) => {
+    const pluginReceivedPromise = new Promise<any>((resolve) => {
       plugin.on('message', (data) => {
         const msg = JSON.parse(data.toString());
-        // 我们在寻找 extension 发出的那个更新
+        if (msg.type === 'state-update' && msg.id === 'update-from-ext') {
+          resolve(msg);
+        }
+      });
+    });
+
+    const centerReceivedPromise = new Promise<any>((resolve) => {
+      center.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
         if (msg.type === 'state-update' && msg.id === 'update-from-ext') {
           resolve(msg);
         }
@@ -112,41 +121,70 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
       })
     );
 
-    const receivedMsg = await broadcastPromise;
-    expect(receivedMsg.payload.microphone).toBe('on');
-    expect(receivedMsg.payload.camera).toBe('off');
+    const [pluginMsg, centerMsg] = await Promise.all([
+      pluginReceivedPromise,
+      centerReceivedPromise,
+    ]);
+
+    expect(pluginMsg.payload.microphone).toBe('on');
+    expect(centerMsg.payload.microphone).toBe('on');
 
     extension.close();
     plugin.close();
+    center.close();
   });
 
   it('应该透传 Action 指令 (action)', async () => {
     const plugin = await createRegisteredClient('plugin');
+    const center = await createRegisteredClient('center');
     const extension = await createRegisteredClient('browser-extension');
 
-    const actionPromise = new Promise<any>((resolve) => {
+    // 测试 Plugin 发送指令 -> Extension 接收
+    const pluginActionPromise = new Promise<any>((resolve) => {
       extension.on('message', (data) => {
         const msg = JSON.parse(data.toString());
-        if (msg.type === 'action' && msg.payload.action === 'toggle-microphone') {
+        if (msg.type === 'action' && msg.id === 'action-from-plugin') {
           resolve(msg);
         }
       });
     });
 
-    // Plugin 发送指令
     plugin.send(
       JSON.stringify({
-        id: 'action-1',
+        id: 'action-from-plugin',
         type: 'action',
         timestamp: Date.now(),
         payload: { action: 'toggle-microphone' },
       })
     );
 
-    const receivedAction = await actionPromise;
-    expect(receivedAction.payload.action).toBe('toggle-microphone');
+    const receivedFromPlugin = await pluginActionPromise;
+    expect(receivedFromPlugin.payload.action).toBe('toggle-microphone');
+
+    // 测试 Center 发送指令 -> Extension 接收
+    const centerActionPromise = new Promise<any>((resolve) => {
+      extension.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'action' && msg.id === 'action-from-center') {
+          resolve(msg);
+        }
+      });
+    });
+
+    center.send(
+      JSON.stringify({
+        id: 'action-from-center',
+        type: 'action',
+        timestamp: Date.now(),
+        payload: { action: 'toggle-camera' },
+      })
+    );
+
+    const receivedFromCenter = await centerActionPromise;
+    expect(receivedFromCenter.payload.action).toBe('toggle-camera');
 
     plugin.close();
+    center.close();
     extension.close();
   });
 });
