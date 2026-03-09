@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach, afterAll } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { WebSocketService } from '../websocketService';
 import { useCenterStore } from '@/stores/centerStore';
@@ -278,4 +278,8 @@ describe('WebSocketService', () => {
       expect(store.browserConnection).toBe('disconnected');
     });
   });
+});
+
+afterAll(() => {
+  global.WebSocket = OriginalWebSocket;
 });
