@@ -219,7 +219,14 @@ async fn handle_connection(
     if let Some(role) = registered_role {
         if role != "center" {
             let disconnect_msg = WebSocketMessage {
-                id: format!("{}-disconnect-{}", role, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+                id: format!(
+                    "{}-disconnect-{}",
+                    role,
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                ),
                 msg_type: format!("{}-disconnected", role),
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
