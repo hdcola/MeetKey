@@ -187,4 +187,86 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
     center.close();
     extension.close();
   });
+
+  it('当 plugin 连接时，center 应该收到 plugin-connected 消息', async () => {
+    const center = await createRegisteredClient('center');
+
+    const connectedPromise = new Promise<any>((resolve) => {
+      center.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'plugin-connected') {
+          resolve(msg);
+        }
+      });
+    });
+
+    const plugin = await createRegisteredClient('plugin');
+    const msg = await connectedPromise;
+
+    expect(msg.type).toBe('plugin-connected');
+
+    plugin.close();
+    center.close();
+  });
+
+  it('当 browser-extension 连接时，center 应该收到 browser-extension-connected 消息', async () => {
+    const center = await createRegisteredClient('center');
+
+    const connectedPromise = new Promise<any>((resolve) => {
+      center.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'browser-extension-connected') {
+          resolve(msg);
+        }
+      });
+    });
+
+    const extension = await createRegisteredClient('browser-extension');
+    const msg = await connectedPromise;
+
+    expect(msg.type).toBe('browser-extension-connected');
+
+    extension.close();
+    center.close();
+  });
+
+  it('当 plugin 断开连接时，center 应该收到 plugin-disconnected 消息', async () => {
+    const center = await createRegisteredClient('center');
+    const plugin = await createRegisteredClient('plugin');
+
+    const disconnectedPromise = new Promise<any>((resolve) => {
+      center.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'plugin-disconnected') {
+          resolve(msg);
+        }
+      });
+    });
+
+    plugin.close();
+    const msg = await disconnectedPromise;
+
+    expect(msg.type).toBe('plugin-disconnected');
+    center.close();
+  });
+
+  it('当 browser-extension 断开连接时，center 应该收到 browser-extension-disconnected 消息', async () => {
+    const center = await createRegisteredClient('center');
+    const extension = await createRegisteredClient('browser-extension');
+
+    const disconnectedPromise = new Promise<any>((resolve) => {
+      center.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'browser-extension-disconnected') {
+          resolve(msg);
+        }
+      });
+    });
+
+    extension.close();
+    const msg = await disconnectedPromise;
+
+    expect(msg.type).toBe('browser-extension-disconnected');
+    center.close();
+  });
 });

@@ -83,6 +83,7 @@ async fn handle_connection(
     let (mut write, mut read) = ws_stream.split();
 
     let mut broadcast_rx = broadcast_tx.subscribe();
+    let mut registered_role: Option<String> = None;
 
     loop {
         tokio::select! {
@@ -107,6 +108,7 @@ async fn handle_connection(
                                         eprintln!("🔍 DEBUG: Payload found: {:?}", payload);
                                         if let Some(role) = payload.get("role").and_then(|r| r.as_str()) {
                                             println!("✅ Client registered as: {}", role);
+                                            registered_role = Some(role.to_string());
 
                                             // Send confirmation back to client
                                             let confirmation = WebSocketMessage {
@@ -210,6 +212,23 @@ async fn handle_connection(
                     let _ = write.send(tungstenite::Message::Text(text)).await;
                 }
             }
+        }
+    }
+
+    // Broadcast disconnection if registered
+    if let Some(role) = registered_role {
+        if role != "center" {
+            let disconnect_msg = WebSocketMessage {
+                id: format!("{}-disconnect-{}", role, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+                msg_type: format!("{}-disconnected", role),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64,
+                payload: Some(serde_json::json!({ "status": "disconnected" })),
+            };
+            println!("📢 Broadcasting disconnection: {}", disconnect_msg.msg_type);
+            let _ = broadcast_tx.send(disconnect_msg);
         }
     }
 
