@@ -8,6 +8,11 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     watch: false, // 默认不进入 watch 模式
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/*.e2e.test.ts', // 排除 E2E 测试文件
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
