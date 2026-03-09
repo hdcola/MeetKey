@@ -19,11 +19,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.17.0
           cache: 'pnpm'
 
       # 2. 设置 Rust (因为有后端测试)
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Rust Cache
         uses: swatinem/rust-cache@v2

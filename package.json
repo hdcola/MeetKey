@@ -28,7 +28,7 @@
   },
   "lint-staged": {
     "*.{js,ts,vue,json,md}": "prettier --write",
-    "*.rs": "rustfmt --edition 2021"
+    "*.rs": "cd packages/center/src-tauri && cargo fmt"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
