@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
 
@@ -9,7 +9,7 @@ export default defineConfig({
     environment: 'happy-dom',
     watch: false, // 默认不进入 watch 模式
     exclude: [
-      '**/node_modules/**',
+      ...configDefaults.exclude,
       '**/dist/**',
       '**/*.e2e.test.ts', // 排除 E2E 测试文件
     ],
