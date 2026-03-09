@@ -120,7 +120,7 @@ async fn handle_connection(
                                             };
                                             println!("📤 Sending confirmation: {}", confirmation.msg_type);
                                             let confirm_json = serde_json::to_string(&confirmation).unwrap();
-                                            
+
                                             match write.send(tungstenite::Message::Text(confirm_json)).await {
                                                 Ok(_) => println!("✅ Confirmation sent to {}", role),
                                                 Err(e) => eprintln!("❌ Failed to send confirmation to {}: {}", role, e),
