@@ -9,22 +9,32 @@
     "dev:extension": "pnpm -C packages/browser-extension dev",
     "dev:center": "pnpm -C packages/center dev",
     "build": "pnpm -r build",
-    "test": "pnpm -r test -- --run",
-    "test:watch": "pnpm -r test -- --watch",
-    "test:coverage": "pnpm -r test -- --coverage",
-    "test:center": "pnpm -C packages/center test -- --run",
-    "test:center:watch": "pnpm -C packages/center test -- --watch",
-    "test:center:coverage": "pnpm -C packages/center test -- --coverage",
-    "test:ui": "pnpm -C packages/center test -- --ui",
-    "test:backend": "cd packages/center/src-tauri && cargo test --lib",
+    "test": "pnpm -r --if-present test",
+    "test:watch": "pnpm -r --if-present test:watch",
+    "test:coverage": "pnpm -r --if-present test:coverage",
+    "test:center": "pnpm -C packages/center test",
+    "test:center:watch": "pnpm -C packages/center test:frontend",
+    "test:center:coverage": "pnpm -C packages/center test:coverage",
+    "test:center:backend": "pnpm -C packages/center test:backend",
+    "test:ui": "pnpm -C packages/center test:ui",
+    "test:backend": "pnpm -C packages/center test:backend",
     "test:backend:coverage": "cd packages/center/src-tauri && cargo tarpaulin --lib --out Stdout",
-    "format": "prettier . --write",
+    "format": "prettier . --write && cd packages/center/src-tauri && cargo fmt",
+    "format:check": "prettier . --check && cd packages/center/src-tauri && cargo fmt --check",
     "lint": "eslint .",
-    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist pnpm-lock.yaml && echo '✅ Clean complete: removed node_modules, dist directories, and pnpm-lock.yaml'"
+    "lint:check": "eslint . --max-warnings 0",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist pnpm-lock.yaml && echo '✅ Clean complete: removed node_modules, dist directories, and pnpm-lock.yaml'",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,vue,json,md}": "prettier --write",
+    "*.rs": "cd packages/center/src-tauri && cargo fmt"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
     "eslint": "^10.0.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3"
   }

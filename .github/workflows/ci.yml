@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  push:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. 设置 Node.js 和 pnpm
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9 # 或你的版本
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.17.0
+          cache: 'pnpm'
+
+      # 2. 设置 Rust (因为有后端测试)
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            packages/center/src-tauri -> target
+
+      # 3. 安装 Linux 系统库 (Tauri 编译/测试必需)
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
+
+      # 4. 安装依赖
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 5. 代码质量检查
+      - name: Lint and Format check
+        run: |
+          pnpm lint:check
+          pnpm format:check
+
+      # 6. 执行测试 (递归运行所有包的测试，包括 center 的前后端)
+      - name: Run Tests
+        run: pnpm test

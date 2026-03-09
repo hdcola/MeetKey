@@ -1,37 +1,37 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
 
-export type ConnectionStatus = 'connected' | 'disconnected' | 'initializing'
-export type DeviceState = 'on' | 'off' | 'unknown'
+export type ConnectionStatus = 'connected' | 'disconnected' | 'initializing';
+export type DeviceState = 'on' | 'off' | 'unknown';
 
 export const useCenterStore = defineStore('center', () => {
   // 设备状态
-  const microphone = ref<DeviceState>('unknown')
-  const camera = ref<DeviceState>('unknown')
+  const microphone = ref<DeviceState>('unknown');
+  const camera = ref<DeviceState>('unknown');
 
   // 连接状态
-  const pluginConnection = ref<ConnectionStatus>('disconnected')
-  const browserConnection = ref<ConnectionStatus>('disconnected')
+  const pluginConnection = ref<ConnectionStatus>('disconnected');
+  const browserConnection = ref<ConnectionStatus>('disconnected');
 
   // 计算属性
-  const isMicrophoneOn = computed(() => microphone.value === 'on')
-  const isCameraOn = computed(() => camera.value === 'on')
+  const isMicrophoneOn = computed(() => microphone.value === 'on');
+  const isCameraOn = computed(() => camera.value === 'on');
 
   // 方法
   function setMicrophoneState(state: DeviceState) {
-    microphone.value = state
+    microphone.value = state;
   }
 
   function setCameraState(state: DeviceState) {
-    camera.value = state
+    camera.value = state;
   }
 
   function setPluginConnection(status: ConnectionStatus) {
-    pluginConnection.value = status
+    pluginConnection.value = status;
   }
 
   function setBrowserConnection(status: ConnectionStatus) {
-    browserConnection.value = status
+    browserConnection.value = status;
   }
 
   return {
@@ -45,5 +45,5 @@ export const useCenterStore = defineStore('center', () => {
     setCameraState,
     setPluginConnection,
     setBrowserConnection,
-  }
-})
+  };
+});

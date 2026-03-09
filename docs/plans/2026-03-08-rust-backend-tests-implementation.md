@@ -6,7 +6,8 @@
 
 **Architecture:** Add inline `#[cfg(test)]` modules in `websocket.rs` with hand-written mock structs for TcpStream/WebSocketStream, test message builders, and organized test suites by message type. No external mock libraries.
 
-**Tech Stack:** 
+**Tech Stack:**
+
 - Rust `#[cfg(test)]` + `#[tokio::test]` macro (built-in)
 - `tokio::sync::broadcast` for testing message routing
 - `serde_json` for message construction
@@ -17,6 +18,7 @@
 ## Task 1: Add test dependencies to Cargo.toml
 
 **Files:**
+
 - Modify: `packages/center/src-tauri/Cargo.toml`
 
 **Step 1: Read current Cargo.toml to understand structure**
@@ -55,6 +57,7 @@ git commit -m "build: add dev-dependencies for backend tests"
 ## Task 2: Add mock trait and MockWebSocketStream struct
 
 **Files:**
+
 - Modify: `packages/center/src-tauri/src/websocket.rs` (add at end before closing brace, around line 200+)
 
 **Step 1: Review websocket.rs structure**
@@ -194,6 +197,7 @@ git commit -m "test: add mock stream and message builder utilities"
 ## Task 3: Add WebSocketServer initialization tests
 
 **Files:**
+
 - Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
 
 **Step 1: Add test for WebSocketServer::new()**
@@ -217,7 +221,7 @@ Inside the `#[cfg(test)] mod tests` block, add before the closing brace of the `
     async fn test_websocket_server_initial_state() {
         let server = WebSocketServer::new(8080);
         let state = server.get_state().await;
-        
+
         assert_eq!(state.microphone, "unknown");
         assert_eq!(state.camera, "unknown");
         assert_eq!(state.last_updated, 0);
@@ -243,6 +247,7 @@ git commit -m "test: add WebSocketServer initialization tests"
 ## Task 4: Add state management tests
 
 **Files:**
+
 - Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
 
 **Step 1: Add update_state and get_state tests**
@@ -253,16 +258,16 @@ Inside the `#[cfg(test)] mod tests` block, add:
     #[tokio::test]
     async fn test_update_state() {
         let server = WebSocketServer::new(8080);
-        
+
         let new_state = MeetDeviceStatus {
             microphone: "on".to_string(),
             camera: "off".to_string(),
             last_updated: 12345,
         };
-        
+
         server.update_state(new_state.clone()).await;
         let state = server.get_state().await;
-        
+
         assert_eq!(state.microphone, "on");
         assert_eq!(state.camera, "off");
         assert_eq!(state.last_updated, 12345);
@@ -271,24 +276,24 @@ Inside the `#[cfg(test)] mod tests` block, add:
     #[tokio::test]
     async fn test_multiple_state_updates() {
         let server = WebSocketServer::new(8080);
-        
+
         // First update
         server.update_state(MeetDeviceStatus {
             microphone: "on".to_string(),
             camera: "on".to_string(),
             last_updated: 1000,
         }).await;
-        
+
         let state1 = server.get_state().await;
         assert_eq!(state1.microphone, "on");
-        
+
         // Second update
         server.update_state(MeetDeviceStatus {
             microphone: "off".to_string(),
             camera: "on".to_string(),
             last_updated: 2000,
         }).await;
-        
+
         let state2 = server.get_state().await;
         assert_eq!(state2.microphone, "off");
         assert_eq!(state2.last_updated, 2000);
@@ -297,13 +302,13 @@ Inside the `#[cfg(test)] mod tests` block, add:
     #[tokio::test]
     async fn test_concurrent_state_reads() {
         let server = Arc::new(WebSocketServer::new(8080));
-        
+
         server.update_state(MeetDeviceStatus {
             microphone: "on".to_string(),
             camera: "on".to_string(),
             last_updated: 999,
         }).await;
-        
+
         // Spawn 5 concurrent reads
         let mut handles = vec![];
         for _ in 0..5 {
@@ -313,7 +318,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
             });
             handles.push(handle);
         }
-        
+
         // Wait for all and verify they all got the same state
         for handle in handles {
             let state = handle.await.unwrap();
@@ -341,6 +346,7 @@ git commit -m "test: add state management tests"
 ## Task 5: Add WebSocketMessage parsing tests
 
 **Files:**
+
 - Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
 
 **Step 1: Add message parsing tests**
@@ -356,10 +362,10 @@ Inside the `#[cfg(test)] mod tests` block, add:
             timestamp: 1234567890,
             payload: Some(serde_json::json!({ "role": "plugin" })),
         };
-        
+
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: WebSocketMessage = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(parsed.id, "test-123");
         assert_eq!(parsed.msg_type, "register");
         assert_eq!(parsed.payload.unwrap()["role"], "plugin");
@@ -369,7 +375,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
     fn test_websocket_message_without_payload() {
         let json = r#"{"id":"test","type":"state-query","timestamp":123,"payload":null}"#;
         let msg: WebSocketMessage = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(msg.msg_type, "state-query");
         assert!(msg.payload.is_none());
     }
@@ -378,7 +384,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
     fn test_invalid_json_parsing() {
         let invalid = "{invalid json}";
         let result: Result<WebSocketMessage, _> = serde_json::from_str(invalid);
-        
+
         assert!(result.is_err());
     }
 
@@ -386,7 +392,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
     fn test_missing_required_fields() {
         let incomplete = r#"{"id":"test"}"#;
         let result: Result<WebSocketMessage, _> = serde_json::from_str(incomplete);
-        
+
         assert!(result.is_err());
     }
 ```
@@ -410,6 +416,7 @@ git commit -m "test: add message parsing and deserialization tests"
 ## Task 6: Add MeetDeviceStatus tests
 
 **Files:**
+
 - Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
 
 **Step 1: Add device status tests**
@@ -424,10 +431,10 @@ Inside the `#[cfg(test)] mod tests` block, add:
             camera: "off".to_string(),
             last_updated: 1234567890,
         };
-        
+
         let json = serde_json::to_string(&status).unwrap();
         let parsed: MeetDeviceStatus = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(parsed.microphone, "on");
         assert_eq!(parsed.camera, "off");
         assert_eq!(parsed.last_updated, 1234567890);
@@ -440,7 +447,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
             camera: "unknown".to_string(),
             last_updated: 0,
         };
-        
+
         assert_eq!(status.microphone, "unknown");
         assert_eq!(status.camera, "unknown");
     }
@@ -452,7 +459,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
             camera: "off".to_string(),
             last_updated: 999,
         };
-        
+
         let status2 = status1.clone();
         assert_eq!(status1.microphone, status2.microphone);
     }
@@ -477,6 +484,7 @@ git commit -m "test: add device status serialization tests"
 ## Task 7: Add TestMessageBuilder validation tests
 
 **Files:**
+
 - Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
 
 **Step 1: Add message builder tests**
@@ -488,7 +496,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
     fn test_message_builder_register() {
         let msg_json = TestMessageBuilder::register("plugin");
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-        
+
         assert_eq!(msg.msg_type, "register");
         assert_eq!(msg.payload.unwrap()["role"], "plugin");
     }
@@ -497,7 +505,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
     fn test_message_builder_register_center() {
         let msg_json = TestMessageBuilder::register("center");
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-        
+
         assert_eq!(msg.payload.unwrap()["role"], "center");
     }
 
@@ -505,7 +513,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
     fn test_message_builder_state_update() {
         let msg_json = TestMessageBuilder::state_update("on", "off");
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-        
+
         assert_eq!(msg.msg_type, "state-update");
         let payload = msg.payload.unwrap();
         assert_eq!(payload["microphone"], "on");
@@ -516,7 +524,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
     fn test_message_builder_state_query() {
         let msg_json = TestMessageBuilder::state_query();
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-        
+
         assert_eq!(msg.msg_type, "state-query");
         assert!(msg.payload.is_none());
     }
@@ -525,7 +533,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
     fn test_message_builder_invalid_json() {
         let invalid = TestMessageBuilder::invalid_json();
         let result: Result<WebSocketMessage, _> = serde_json::from_str(&invalid);
-        
+
         assert!(result.is_err());
     }
 
@@ -533,7 +541,7 @@ Inside the `#[cfg(test)] mod tests` block, add:
     fn test_message_builder_missing_role() {
         let msg_json = TestMessageBuilder::missing_role();
         let msg: WebSocketMessage = serde_json::from_str(&msg_json).unwrap();
-        
+
         // Message parses, but role is missing
         assert!(msg.payload.unwrap().get("role").is_none());
     }
@@ -558,6 +566,7 @@ git commit -m "test: add message builder utility tests"
 ## Task 8: Add broadcast channel tests
 
 **Files:**
+
 - Modify: `packages/center/src-tauri/src/websocket.rs` (add in `#[cfg(test)]` section)
 
 **Step 1: Add broadcast functionality tests**
@@ -576,17 +585,17 @@ Inside the `#[cfg(test)] mod tests` block, add:
     #[tokio::test]
     async fn test_broadcast_single_message() {
         let (_tx, mut rx) = tokio::sync::broadcast::channel(10);
-        
+
         let msg = WebSocketMessage {
             id: "test".to_string(),
             msg_type: "test".to_string(),
             timestamp: 0,
             payload: None,
         };
-        
+
         let _tx_clone = _tx.clone();
         let _ = _tx_clone.send(msg.clone());
-        
+
         // Verify a message can be sent/received on broadcast
         if let Ok(received) = rx.recv().await {
             assert_eq!(received.id, "test");
@@ -596,24 +605,24 @@ Inside the `#[cfg(test)] mod tests` block, add:
     #[tokio::test]
     async fn test_broadcast_multiple_subscribers() {
         let (tx, _) = tokio::sync::broadcast::channel(10);
-        
+
         let mut rx1 = tx.subscribe();
         let mut rx2 = tx.subscribe();
-        
+
         let msg = WebSocketMessage {
             id: "multi-test".to_string(),
             msg_type: "broadcast-test".to_string(),
             timestamp: 0,
             payload: None,
         };
-        
+
         let _ = tx.send(msg.clone());
-        
+
         // Both subscribers should receive
         if let Ok(msg1) = rx1.recv().await {
             assert_eq!(msg1.id, "multi-test");
         }
-        
+
         if let Ok(msg2) = rx2.recv().await {
             assert_eq!(msg2.id, "multi-test");
         }
@@ -639,6 +648,7 @@ git commit -m "test: add broadcast channel tests"
 ## Task 9: Run full test suite and check coverage
 
 **Files:**
+
 - Check: `packages/center/src-tauri/src/websocket.rs`
 
 **Step 1: Run all backend tests**
@@ -650,11 +660,13 @@ Expected: All tests PASS (count should be 20+)
 **Step 2: Check test coverage with tarpaulin**
 
 First, install tarpaulin if not already present:
+
 ```bash
 cargo install cargo-tarpaulin
 ```
 
 Then run coverage:
+
 ```bash
 cd packages/center/src-tauri && cargo tarpaulin --lib --out Html --output-dir target/coverage
 ```
@@ -680,6 +692,7 @@ git commit -m "test: complete backend test suite with comprehensive coverage"
 ## Task 10: Add backend tests to CI and documentation
 
 **Files:**
+
 - Create: `docs/testing/backend-tests.md`
 - Modify: `package.json` (root)
 - Modify: `packages/center/package.json`
@@ -698,17 +711,20 @@ Backend tests for `packages/center/src-tauri/src/websocket.rs` use Rust's built-
 ## Running Tests
 
 ### Run all backend tests
+
 \`\`\`bash
 cd packages/center/src-tauri
 cargo test --lib
 \`\`\`
 
 ### Run specific test
+
 \`\`\`bash
 cargo test --lib test_websocket_server_new
 \`\`\`
 
 ### Run with output
+
 \`\`\`bash
 cargo test --lib -- --nocapture
 \`\`\`
@@ -735,6 +751,7 @@ Tests are organized in `#[cfg(test)]` module in `websocket.rs`:
 ## Mock Strategy
 
 Simple hand-written mocks, no external libraries:
+
 - `MockWebSocketStream` - simulates WebSocket I/O
 - `TestMessageBuilder` - constructs valid/invalid test messages
 
@@ -770,11 +787,13 @@ git commit -m "docs: add backend testing guide and scripts"
 ## Task 11: Verify all tests pass and create summary
 
 **Files:**
+
 - Check: All test files
 
 **Step 1: Run complete test suite (frontend + backend)**
 
 Run both:
+
 ```bash
 cd /Users/hd/work/prj/MeetKey
 pnpm test:center           # Frontend tests
@@ -786,6 +805,7 @@ Expected: All tests PASS (frontend: 66 tests, backend: 20+ tests)
 **Step 2: Verify coverage metrics**
 
 Frontend:
+
 ```bash
 pnpm test:center:coverage 2>&1 | grep "% Stmts"
 ```
@@ -793,6 +813,7 @@ pnpm test:center:coverage 2>&1 | grep "% Stmts"
 Expected: >80%
 
 Backend:
+
 ```bash
 cd packages/center/src-tauri && cargo tarpaulin --lib --out Stdout | grep "Total"
 ```
@@ -820,7 +841,7 @@ git commit -m "test: complete frontend and backend test suite
 ✅ **Tests run in <10 seconds total**  
 ✅ **No external mock libraries required**  
 ✅ **Tests integrated with CI/CD scripts**  
-✅ **Documentation complete**  
+✅ **Documentation complete**
 
 ## Notes
 

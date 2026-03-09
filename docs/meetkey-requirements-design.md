@@ -54,10 +54,12 @@
 ### 核心操作场景
 
 **MVP 阶段：**
+
 - 快速静音/取消静音（热键或按钮）
 - 快速打开/关闭摄像头（热键或按钮）
 
 **支持三种控制方式：**
+
 1. **硬件按钮** - Stream Deck 按钮（需要硬件）
 2. **全局热键** - 系统级快捷键（Ctrl+Alt 组合）
 3. **UI 按钮** - MeetKey Center 应用界面
@@ -129,7 +131,7 @@
      │      │           ↓
      │      │        [Google Meet]
      │      │
-     │      └─→ [Stream Deck Plugin] 
+     │      └─→ [Stream Deck Plugin]
      │           ↓
      │        [硬件按钮]
      │
@@ -145,8 +147,9 @@
 2️⃣ 普通用户:    热键 / UI 按钮 → Center → Extension → Meet
 3️⃣ 调试者:      UI 界面        → Center → Extension → Meet
 ```
+
 ┌─────────────────────────────────────────────────────────────┐
-│                       MeetKey 系统架构                       │
+│ MeetKey 系统架构 │
 └─────────────────────────────────────────────────────────────┘
 
         使用方式 A: Stream Dock 硬件用户
@@ -187,22 +190,24 @@
         Browser Extension (@meetkey/browser-extension)
                          │
                  [Google Meet 网页]
+
 ```
 
 ### 4.2 数据流向（实时状态同步 - 方案 C）
 
 ```
+
 场景：用户在 Google Meet 网页上手动打开摄像头
 
 1. Browser Extension 检测 Google Meet 状态变化
    ↓
 2. Extension 向 Tauri Service 发送状态更新
    {
-     "type": "state-update",
-     "state": {
-       "microphone": "on",
-       "camera": "on"
-     }
+   "type": "state-update",
+   "state": {
+   "microphone": "on",
+   "camera": "on"
+   }
    }
    ↓
 3. Tauri Service 接收并存储状态
@@ -210,10 +215,11 @@
 4. Tauri Service 向已连接的所有客户端推送状态
    - Stream Dock Plugin
    - Service UI (macOS/Windows)
-   ↓
+     ↓
 5. Plugin 和 Service UI 实时更新显示
    - 动态按钮显示新状态
    - 工具栏图标更新
+
 ```
 
 ### 4.3 包结构和职责
@@ -258,12 +264,14 @@
 **架构模式：**
 
 ```
+
 MeetKey Center (Tauri App)
 ├─ Rust 后端：WebSocket Server (接收其他客户端的连接)
 ├─ Rust 后端：全局热键监听 (系统级快捷键注册)
 ├─ Rust 后端：状态管理 (中心状态存储)
 └─ Vue 前端：UI 界面 (本地 client，可操作按钮)
-```
+
+````
 
 **理由：**
 
@@ -342,7 +350,7 @@ MeetKey Center (Tauri App)
     "language": "zh_CN"
   }
 }
-```
+````
 
 **可配置项：**
 
@@ -364,6 +372,7 @@ MeetKey Center (Tauri App)
 5. Center 自动检测 Plugin 和 Extension 连接，建立通信
 
 **热键激活：**
+
 - Center 启动后自动注册全局热键
 - 用户在 Center UI 中修改热键配置后，自动更新系统热键注册
 
@@ -503,9 +512,9 @@ MeetKey Center (Tauri App)
 
 ## 13. 批准记录
 
-| 角色        | 日期       | 意见      |
-| ----------- | ---------- | --------- |
+| 角色        | 日期       | 意见                          |
+| ----------- | ---------- | ----------------------------- |
 | 用户        | 2026-03-06 | ✅ 已批准（添加热键绑定功能） |
-| Claude Code | 2026-03-06 | ✅ 已批准 |
+| Claude Code | 2026-03-06 | ✅ 已批准                     |
 
 ---

@@ -5,12 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 **MeetKey** is a monorepo project that integrates Stream Deck with browsers to control Google Meet. It consists of four interconnected packages:
+
 - **@meetkey/plugin** - Stream Deck plugin (Vue 3 + Vite)
 - **@meetkey/browser-extension** - Browser extension (Vue 3 + WXT)
 - **@meetkey/service** - Central WebSocket service (Tauri + Rust)
 - **@meetkey/shared** - Shared types and communication protocol
 
 **Key Tech Stack:**
+
 - **Package Manager:** pnpm monorepo
 - **UI Frameworks:** Vue 3 with TypeScript
 - **Build Tools:** Vite (plugin), WXT (browser-extension), Tauri (service)
@@ -43,6 +45,7 @@ pnpm clean
 ```
 
 **Single package development:**
+
 ```bash
 cd packages/plugin
 pnpm dev
@@ -52,6 +55,7 @@ pnpm dev
 ```
 
 **Quick cleanup and reinstall:**
+
 ```bash
 # Clean and reinstall everything
 pnpm clean && pnpm install
@@ -164,6 +168,7 @@ Both plugins communicate through `@meetkey/shared` - shared types and WebSocket 
 ### @meetkey/shared - Communication Protocol
 
 Defines:
+
 - **Message types**: ActionMessage, EventMessage, ErrorMessage
 - **Protocol builders**: MessageBuilder for constructing valid messages
 - **Type definitions**: MeetAction, DeviceInfo, etc.
@@ -172,10 +177,12 @@ Defines:
 ### @meetkey/plugin - Stream Deck Integration
 
 **Entry Point Pattern** (`src/main.ts`):
+
 - If `arguments[4]` exists: mounts **Property Inspector** (settings UI)
 - Otherwise: mounts **Plugin** (action handler)
 
 All entry-point arguments stored in `window.argv`:
+
 ```
 argv[0] = context
 argv[1] = action
@@ -185,11 +192,13 @@ argv[4] = optional property payload
 ```
 
 **Manifest System** (`src/manifest.cjs`):
+
 - Plugin UUID and version
 - Actions array with multilingual i18n (en, zh_CN)
 - Each action: UUID, icon, names/tooltips, states, settings
 
 **State Management**:
+
 - **usePluginStore()** (Pinia): Device state, events, lifecycle
 - **usePropertyStore()**: Settings state
 - **useWatchEvent()**: StreamDock event subscriptions
@@ -198,6 +207,7 @@ argv[4] = optional property payload
 ### @meetkey/service - Central Coordinator
 
 **Rust Backend** (`src-tauri/src/`):
+
 - **main.rs**: Tauri window and event setup
 - **websocket.rs**: WebSocket server (port 8080 by default)
 - **installer.rs**: Plugin installation logic for both plugin and browser-extension
@@ -207,6 +217,7 @@ argv[4] = optional property payload
 ### Workspace Dependencies
 
 Packages reference each other using pnpm workspace protocol:
+
 ```json
 {
   "dependencies": {
@@ -260,10 +271,12 @@ This ensures all packages use local versions during development.
 ### Adding Features to @meetkey/service
 
 **Vue Frontend** (`packages/service/src/`):
+
 - Standard Vue 3 development
 - Use Tauri API via `@tauri-apps/api`
 
 **Rust Backend** (`packages/service/src-tauri/src/`):
+
 - WebSocket server listens on port 8080
 - Handles connections from both plugin and browser-extension
 - Manages plugin installation for both targets
@@ -272,12 +285,12 @@ This ensures all packages use local versions during development.
 
 ### Build Artifacts
 
-| Package | Output | Location |
-|---------|--------|----------|
-| @meetkey/plugin | `.sdPlugin` directory | `packages/plugin/dist/` |
-| @meetkey/browser-extension | Browser extension package | `packages/browser-extension/dist/` |
-| @meetkey/service | Native executable (.exe/.dmg) | `packages/service/src-tauri/target/release/` |
-| @meetkey/shared | TypeScript/JS modules | `packages/shared/dist/` |
+| Package                    | Output                        | Location                                     |
+| -------------------------- | ----------------------------- | -------------------------------------------- |
+| @meetkey/plugin            | `.sdPlugin` directory         | `packages/plugin/dist/`                      |
+| @meetkey/browser-extension | Browser extension package     | `packages/browser-extension/dist/`           |
+| @meetkey/service           | Native executable (.exe/.dmg) | `packages/service/src-tauri/target/release/` |
+| @meetkey/shared            | TypeScript/JS modules         | `packages/shared/dist/`                      |
 
 ### @meetkey/plugin Build Flow
 
@@ -342,7 +355,9 @@ This ensures all packages use local versions during development.
 ## Version Control & Environment
 
 ### .gitignore
+
 A comprehensive `.gitignore` is configured to exclude:
+
 - Dependencies: `node_modules/`, `.pnpm-store/`
 - Build outputs: `dist/`, `build/`, Rust `target/`
 - Environment: `.env`, `.env.local`
@@ -351,4 +366,5 @@ A comprehensive `.gitignore` is configured to exclude:
 - Temporary files: `*.swp`, `.cache/`, `.turbo/`
 
 ### pnpm-lock.yaml
+
 The lock file is committed to ensure consistent dependency versions across all team members.

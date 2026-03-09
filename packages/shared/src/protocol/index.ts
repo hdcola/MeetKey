@@ -42,10 +42,7 @@ export class MessageBuilder {
    * @param device 设备类型 ('microphone' | 'camera')
    * @param action 操作 ('turn-on' | 'turn-off' | 'toggle')
    */
-  static createCommandMessage(
-    device: MeetDeviceType,
-    action: MeetCommandAction
-  ): CommandMessage {
+  static createCommandMessage(device: MeetDeviceType, action: MeetCommandAction): CommandMessage {
     return {
       id: uuidv4(),
       type: 'command',
@@ -125,9 +122,7 @@ export function isValidMessage(data: unknown): data is WebSocketMessage {
   if (!data || typeof data !== 'object') return false;
   const msg = data as Record<string, unknown>;
   return (
-    typeof msg.id === 'string' &&
-    typeof msg.type === 'string' &&
-    typeof msg.timestamp === 'number'
+    typeof msg.id === 'string' && typeof msg.type === 'string' && typeof msg.timestamp === 'number'
   );
 }
 

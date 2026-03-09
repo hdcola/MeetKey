@@ -1,10 +1,14 @@
 {
+  "productName": "MeetKey Center",
+  "version": "0.1.0",
+  "identifier": "com.meetkey.center",
   "build": {
     "beforeDevCommand": "pnpm dev-frontend",
     "beforeBuildCommand": "pnpm build-frontend",
-    "devPath": "http://localhost:5173"
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
   },
-  "tauri": {
+  "app": {
     "windows": [
       {
         "title": "MeetKey Center",
@@ -17,5 +21,10 @@
     "security": {
       "csp": null
     }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["../icons/icon.png"]
   }
 }

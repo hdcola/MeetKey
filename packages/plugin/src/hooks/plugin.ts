@@ -30,7 +30,7 @@ export const usePluginStore = defineStore('pluginStore', () => {
   const server = new WebSocket('ws://127.0.0.1:' + window.argv[0]);
   server.onopen = () => server.send(JSON.stringify({ event: window.argv[2], uuid: window.argv[1] }));
   server.onmessage = (e) => {
-    message.value = JSON.parse(e.data)
+    message.value = JSON.parse(e.data);
     // console.log(e.data)
   };
 
@@ -47,38 +47,43 @@ export const usePluginStore = defineStore('pluginStore', () => {
   //获取全局设置数据
   const getGlobalSettings = () => {
     server.send(JSON.stringify({ event: 'getGlobalSettings', context: window.argv[1] }));
-  }
+  };
 
   // 设置背景
   const setBackground = (img: string, device: string, clearIcon = true) => {
-    server.send(JSON.stringify({
-      "event": "setBackground",
-      "device": device,
-      "payload": {
-        "image": img,
-        "clearIcon": clearIcon
-      }
-    }));
+    server.send(
+      JSON.stringify({
+        event: 'setBackground',
+        device: device,
+        payload: {
+          image: img,
+          clearIcon: clearIcon
+        }
+      })
+    );
   };
 
   // 通知软件背景停了
   const stopBackground = (device: string) => {
-    server.send(JSON.stringify({
-      "event": "stopBackground",
-      "device": device,
-      "payload": {
-        "clearIcon": true// 如果设置背景的时候设置了清除图标true就需要带上这个参数并设置为true(告诉软件需要恢复图标)
-      }
-    }));
+    server.send(
+      JSON.stringify({
+        event: 'stopBackground',
+        device: device,
+        payload: {
+          clearIcon: true // 如果设置背景的时候设置了清除图标true就需要带上这个参数并设置为true(告诉软件需要恢复图标)
+        }
+      })
+    );
   };
 
   // 获取用户信息
   const getUserInfo = () => {
-    server.send(JSON.stringify({
-      "event": "getUserInfo"
-    }));
+    server.send(
+      JSON.stringify({
+        event: 'getUserInfo'
+      })
+    );
   };
-
 
   // 操作数据存储
   class Actions {
@@ -167,14 +172,13 @@ export const usePluginStore = defineStore('pluginStore', () => {
         JSON.stringify({
           event: 'registrationScreenSaverEvent',
           device: device,
-          context: this.context,
-        }),
+          context: this.context
+        })
       );
     };
   }
 
   class EventEmitter {
-
     events: { [key: string]: any[] };
     constructor() {
       this.events = {};
@@ -198,7 +202,7 @@ export const usePluginStore = defineStore('pluginStore', () => {
     // 发布事件
     emit(event: string, data: any) {
       if (!this.events[event]) return;
-      this.events[event].forEach(listener => listener(data));
+      this.events[event].forEach((listener) => listener(data));
     }
   }
 
@@ -230,10 +234,9 @@ export const usePluginStore = defineStore('pluginStore', () => {
 type MessageTypes = { plugin: StreamDock.PluginMessage; action: StreamDock.ActionMessage };
 type payload = {
   settings: any;
-}
+};
 export const useWatchEvent = <T extends keyof MessageTypes>(type: T, MessageEvents: MessageTypes[T]) => {
   const plugin = usePluginStore();
-
 
   if (type === 'plugin') {
     return watch(
