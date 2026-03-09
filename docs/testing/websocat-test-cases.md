@@ -110,7 +110,7 @@ websocat ws://127.0.0.1:8080
 
 ```bash
 websocat ws://127.0.0.1:8080
-{"id":"test-2","type":"register","timestamp":1234567890,"payload":{"role":"extension"}}
+{"id":"test-2","type":"register","timestamp":1234567890,"payload":{"role":"browser-extension"}}
 ```
 
 **预期：**
@@ -156,7 +156,7 @@ websocat ws://127.0.0.1:8080
 
 ```bash
 websocat ws://127.0.0.1:8080
-{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"extension"}}
+{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"browser-extension"}}
 ```
 
 等待后续消息...
@@ -214,7 +214,7 @@ websocat ws://127.0.0.1:8080
 
 ```bash
 websocat ws://127.0.0.1:8080
-{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"extension"}}
+{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"browser-extension"}}
 {"id":"update-1","type":"state-update","timestamp":1234567891,"payload":{"microphone":"on","camera":"off","last_updated":1234567891}}
 ```
 
@@ -245,7 +245,7 @@ websocat ws://127.0.0.1:8080
 
 ```bash
 websocat ws://127.0.0.1:8080
-{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"extension"}}
+{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"browser-extension"}}
 {"id":"init-state","type":"state-update","timestamp":1234567891,"payload":{"microphone":"on","camera":"on","last_updated":1234567891}}
 ```
 
@@ -311,7 +311,7 @@ websocat ws://127.0.0.1:8080
 
 # 发送以下消息序列：
 # 1. 注册
-{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"extension"}}
+{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"browser-extension"}}
 
 # 2. 等待一秒后，发送状态更新
 {"id":"update-1","type":"state-update","timestamp":1234567891,"payload":{"microphone":"on","camera":"on","last_updated":1234567891}}

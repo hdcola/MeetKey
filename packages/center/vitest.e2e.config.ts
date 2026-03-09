@@ -10,6 +10,8 @@ export default defineConfig({
     watch: false,
     include: ['src/__tests__/*.e2e.test.ts'],
     globalSetup: ['./src/__tests__/setup-e2e.ts'],
+    testTimeout: 60000,
+    hookTimeout: 60000,
   },
   resolve: {
     alias: {

@@ -24,7 +24,7 @@ import { v4 as uuidv4 } from 'uuid';
 export class MessageBuilder {
   /**
    * 注册客户端角色
-   * @param role 客户端角色 ('plugin' | 'extension')
+   * @param role 客户端角色 ('plugin' | 'browser-extension')
    */
   static createRegisterMessage(role: ClientRole): RegisterMessage {
     return {

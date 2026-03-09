@@ -3,7 +3,7 @@
  */
 
 // 客户端角色
-export type ClientRole = 'plugin' | 'extension' | 'browser-extension' | 'center';
+export type ClientRole = 'plugin' | 'browser-extension' | 'center';
 
 // 基础消息类型
 export type MessageType =
@@ -29,6 +29,15 @@ export interface RegisterMessage extends WebSocketMessage {
   type: 'register';
   payload: {
     role: ClientRole;
+  };
+}
+
+// Action Message - 客户端发送通用动作
+export interface ActionMessage extends WebSocketMessage {
+  type: 'action';
+  payload: {
+    action: string;
+    params?: Record<string, unknown>;
   };
 }
 

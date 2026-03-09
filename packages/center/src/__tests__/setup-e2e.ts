@@ -30,11 +30,15 @@ async function isPortInUse(port: number): Promise<boolean> {
   });
 }
 
-export async function setup() {
+/**
+ * Vitest Global Setup for E2E tests
+ */
+export default async function () {
   const isServerRunning = await isPortInUse(PORT);
 
   if (isServerRunning) {
     console.log('🌐 Server is already running on port 8080, skipping spawn.');
+    // 如果服务器已经运行，我们不返回 teardown，这样就不会意外杀掉用户的开发环境进程
     return;
   }
 
@@ -67,12 +71,13 @@ export async function setup() {
     if (serverProcess) serverProcess.kill();
     throw err;
   }
-}
 
-export async function teardown() {
-  if (serverProcess) {
-    console.log('🛑 Stopping WebSocket server...');
-    serverProcess.kill();
-    console.log('✅ Server stopped');
-  }
+  // 返回 teardown 函数供 Vitest 调用
+  return async () => {
+    if (serverProcess) {
+      console.log('🛑 Stopping WebSocket server...');
+      serverProcess.kill();
+      console.log('✅ Server stopped');
+    }
+  };
 }

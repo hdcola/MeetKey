@@ -119,16 +119,17 @@ export class WebSocketService {
   }
 
   private handleClose() {
-    if (this.isExplicitDisconnect) {
-      console.log('WebSocket connection closed explicitly');
-      return;
-    }
-
-    console.log('WebSocket closed, attempting to reconnect...');
     const store = useCenterStore();
     store.setBrowserConnection('disconnected');
     store.setPluginConnection('disconnected');
 
+    if (this.isExplicitDisconnect) {
+      console.log('WebSocket connection closed explicitly');
+      this.reconnectAttempts = 0;
+      return;
+    }
+
+    console.log('WebSocket closed, attempting to reconnect...');
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       setTimeout(() => this.connect(), 1000 * this.reconnectAttempts);

@@ -10,7 +10,7 @@
 
 ### 1. `packages/shared/src/types/index.ts`
 
-- ✅ 新增 `ClientRole` 类型：`'plugin' | 'extension'`
+- ✅ 新增 `ClientRole` 类型：`'plugin' | 'browser-extension'`
 - ✅ 新增 `'register'` 到 `MessageType` 枚举
 - ✅ 新增 `RegisterMessage` 接口，用于客户端声明角色
 - ✅ 修改 `MeetDeviceStatus` 字段名：`lastUpdated` → `last_updated`（统一 snake_case）
@@ -26,8 +26,8 @@
 完整重写消息路由逻辑：
 
 - ✅ **客户端跟踪**：使用 `HashMap<String, (ClientInfo, ClientSender)>` 管理所有连接的客户端，每个客户端记录 ID 和角色
-- ✅ **角色注册**：`register` 消息处理，将客户端标记为 `'plugin'` 或 `'extension'`
-- ✅ **命令转发**：`command` 消息仅转发给所有 `'extension'` 角色客户端
+- ✅ **角色注册**：`register` 消息处理，将客户端标记为 `'plugin'` 或 `'browser-extension'`
+- ✅ **命令转发**：`command` 消息仅转发给所有 `'browser-extension'` 角色客户端
 - ✅ **状态广播**：`state-update` 消息更新服务器状态，并广播给所有 `'plugin'` 角色客户端
 - ✅ **状态查询**：`state-query` 消息直接回复 `state-response`，包含当前状态
 - ✅ **心跳处理**：`ping` 消息回复 `pong`
@@ -130,7 +130,7 @@ cd packages/service && pnpm dev
 
 ```bash
 websocat ws://127.0.0.1:8080
-{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"extension"}}
+{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"browser-extension"}}
 {"id":"state-1","type":"state-update","timestamp":1234567891,"payload":{"microphone":"on","camera":"on","last_updated":1234567891}}
 ```
 
