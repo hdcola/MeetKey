@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import WebSocket from 'ws';
 
 // 在 Node 环境中模拟浏览器的 WebSocket
@@ -7,6 +7,38 @@ if (typeof global.WebSocket === 'undefined') {
 }
 
 const WS_URL = 'ws://127.0.0.1:8080';
+const DEFAULT_TIMEOUT = 5000;
+
+/**
+ * 助手函数：带超时的等待消息
+ */
+async function waitForMessage(
+  ws: WebSocket,
+  condition: (msg: any) => boolean,
+  timeoutMs = DEFAULT_TIMEOUT
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      ws.off('message', onMessage);
+      reject(new Error(`等待消息超时 (${timeoutMs}ms)`));
+    }, timeoutMs);
+
+    function onMessage(data: any) {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (condition(msg)) {
+          clearTimeout(timeout);
+          ws.off('message', onMessage);
+          resolve(msg);
+        }
+      } catch (e) {
+        // 忽略非 JSON 消息
+      }
+    }
+
+    ws.on('message', onMessage);
+  });
+}
 
 /**
  * 助手函数：创建一个已注册的 WebSocket 客户端
@@ -18,7 +50,7 @@ async function createRegisteredClient(role: string): Promise<WebSocket> {
     const timeout = setTimeout(() => {
       ws.close();
       reject(new Error(`连接 ${role} 超时`));
-    }, 2000);
+    }, DEFAULT_TIMEOUT);
 
     ws.on('open', () => {
       ws.send(
@@ -31,11 +63,16 @@ async function createRegisteredClient(role: string): Promise<WebSocket> {
       );
     });
 
-    ws.on('message', (data) => {
-      const msg = JSON.parse(data.toString());
-      if (msg.type === `${role}-connected`) {
-        clearTimeout(timeout);
-        resolve(ws);
+    ws.on('message', function onMessage(data) {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === `${role}-connected`) {
+          clearTimeout(timeout);
+          ws.off('message', onMessage);
+          resolve(ws);
+        }
+      } catch (e) {
+        // 忽略
       }
     });
 
@@ -56,14 +93,7 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
   it('应该支持状态查询 (state-query)', async () => {
     const center = await createRegisteredClient('center');
 
-    const responsePromise = new Promise<any>((resolve) => {
-      center.on('message', (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'state-response') {
-          resolve(msg);
-        }
-      });
-    });
+    const responsePromise = waitForMessage(center, (msg) => msg.type === 'state-response');
 
     center.send(
       JSON.stringify({
@@ -87,23 +117,15 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
     const plugin = await createRegisteredClient('plugin');
     const center = await createRegisteredClient('center');
 
-    const pluginReceivedPromise = new Promise<any>((resolve) => {
-      plugin.on('message', (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'state-update' && msg.id === 'update-from-ext') {
-          resolve(msg);
-        }
-      });
-    });
+    const pluginReceivedPromise = waitForMessage(
+      plugin,
+      (msg) => msg.type === 'state-update' && msg.id === 'update-from-ext'
+    );
 
-    const centerReceivedPromise = new Promise<any>((resolve) => {
-      center.on('message', (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'state-update' && msg.id === 'update-from-ext') {
-          resolve(msg);
-        }
-      });
-    });
+    const centerReceivedPromise = waitForMessage(
+      center,
+      (msg) => msg.type === 'state-update' && msg.id === 'update-from-ext'
+    );
 
     // Extension 发送状态更新
     const testState = {
@@ -140,14 +162,10 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
     const extension = await createRegisteredClient('browser-extension');
 
     // 测试 Plugin 发送指令 -> Extension 接收
-    const pluginActionPromise = new Promise<any>((resolve) => {
-      extension.on('message', (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'action' && msg.id === 'action-from-plugin') {
-          resolve(msg);
-        }
-      });
-    });
+    const pluginActionPromise = waitForMessage(
+      extension,
+      (msg) => msg.type === 'action' && msg.id === 'action-from-plugin'
+    );
 
     plugin.send(
       JSON.stringify({
@@ -162,14 +180,10 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
     expect(receivedFromPlugin.payload.action).toBe('toggle-microphone');
 
     // 测试 Center 发送指令 -> Extension 接收
-    const centerActionPromise = new Promise<any>((resolve) => {
-      extension.on('message', (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'action' && msg.id === 'action-from-center') {
-          resolve(msg);
-        }
-      });
-    });
+    const centerActionPromise = waitForMessage(
+      extension,
+      (msg) => msg.type === 'action' && msg.id === 'action-from-center'
+    );
 
     center.send(
       JSON.stringify({
@@ -191,14 +205,7 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
   it('当 plugin 连接时，center 应该收到 plugin-connected 消息', async () => {
     const center = await createRegisteredClient('center');
 
-    const connectedPromise = new Promise<any>((resolve) => {
-      center.on('message', (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'plugin-connected') {
-          resolve(msg);
-        }
-      });
-    });
+    const connectedPromise = waitForMessage(center, (msg) => msg.type === 'plugin-connected');
 
     const plugin = await createRegisteredClient('plugin');
     const msg = await connectedPromise;
@@ -212,14 +219,10 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
   it('当 browser-extension 连接时，center 应该收到 browser-extension-connected 消息', async () => {
     const center = await createRegisteredClient('center');
 
-    const connectedPromise = new Promise<any>((resolve) => {
-      center.on('message', (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'browser-extension-connected') {
-          resolve(msg);
-        }
-      });
-    });
+    const connectedPromise = waitForMessage(
+      center,
+      (msg) => msg.type === 'browser-extension-connected'
+    );
 
     const extension = await createRegisteredClient('browser-extension');
     const msg = await connectedPromise;
@@ -234,14 +237,7 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
     const center = await createRegisteredClient('center');
     const plugin = await createRegisteredClient('plugin');
 
-    const disconnectedPromise = new Promise<any>((resolve) => {
-      center.on('message', (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'plugin-disconnected') {
-          resolve(msg);
-        }
-      });
-    });
+    const disconnectedPromise = waitForMessage(center, (msg) => msg.type === 'plugin-disconnected');
 
     plugin.close();
     const msg = await disconnectedPromise;
@@ -254,14 +250,10 @@ describe('WebSocket E2E 集成测试 (需要服务器运行在 8080 端口)', ()
     const center = await createRegisteredClient('center');
     const extension = await createRegisteredClient('browser-extension');
 
-    const disconnectedPromise = new Promise<any>((resolve) => {
-      center.on('message', (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'browser-extension-disconnected') {
-          resolve(msg);
-        }
-      });
-    });
+    const disconnectedPromise = waitForMessage(
+      center,
+      (msg) => msg.type === 'browser-extension-disconnected'
+    );
 
     extension.close();
     const msg = await disconnectedPromise;

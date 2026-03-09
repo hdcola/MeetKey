@@ -3,12 +3,13 @@
  */
 
 // 客户端角色
-export type ClientRole = 'plugin' | 'extension';
+export type ClientRole = 'plugin' | 'extension' | 'browser-extension' | 'center';
 
 // 基础消息类型
 export type MessageType =
   | 'register'
   | 'command'
+  | 'action'
   | 'state-update'
   | 'state-query'
   | 'state-response'

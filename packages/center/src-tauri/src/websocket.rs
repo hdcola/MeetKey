@@ -128,7 +128,8 @@ async fn handle_connection(
                                                 Err(e) => eprintln!("❌ Failed to send confirmation to {}: {}", role, e),
                                             }
 
-                                            // Only broadcast to others for non-center roles
+                                            // Broadcast connection event to all subscribers (including the sender)
+                                            // Clients should filter messages by ID or role if self-handling is not desired.
                                             if role != "center" {
                                                 let broadcast_msg = WebSocketMessage {
                                                     id: format!("{}-broadcast", message.id),
