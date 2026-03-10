@@ -13,9 +13,11 @@
     "test:watch": "pnpm -r --if-present test:watch",
     "test:coverage": "pnpm -r --if-present test:coverage",
     "test:center": "pnpm -C packages/center test",
-    "test:center:watch": "pnpm -C packages/center test:frontend",
+    "test:center:watch": "pnpm -C packages/center test:watch",
     "test:center:coverage": "pnpm -C packages/center test:coverage",
+    "test:center:e2e": "pnpm -C packages/center test:e2e",
     "test:center:backend": "pnpm -C packages/center test:backend",
+    "test:e2e": "pnpm -C packages/center test:e2e",
     "test:ui": "pnpm -C packages/center test:ui",
     "test:backend": "pnpm -C packages/center test:backend",
     "test:backend:coverage": "cd packages/center/src-tauri && cargo tarpaulin --lib --out Stdout",
@@ -28,7 +30,7 @@
   },
   "lint-staged": {
     "*.{js,ts,vue,json,md}": "prettier --write",
-    "*.rs": "cd packages/center/src-tauri && cargo fmt"
+    "*.rs": "cargo fmt --manifest-path packages/center/src-tauri/Cargo.toml --"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",

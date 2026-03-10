@@ -70,3 +70,4 @@ coverage/
 GEMINI.md
 .claude/settings.local.json
 .serena/memories/
+.ccbot-uploads/

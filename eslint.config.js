@@ -8,6 +8,7 @@ export default [
       'packages/center/src-tauri/target/**',
       'packages/center/target/**',
       '**/target/**',
+      '**/.serena/**',
     ],
   },
   {

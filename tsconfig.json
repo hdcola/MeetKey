@@ -16,5 +16,6 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "resolveJsonModule": true
-  }
+  },
+  "exclude": ["node_modules", "dist", ".output", "coverage", ".serena"]
 }

@@ -5,6 +5,7 @@ export class WebSocketService {
   private url: string;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
+  private isExplicitDisconnect = false;
 
   constructor(url: string = 'ws://127.0.0.1:8080') {
     this.url = url;
@@ -12,6 +13,7 @@ export class WebSocketService {
 
   connect() {
     try {
+      this.isExplicitDisconnect = false;
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = this.handleOpen.bind(this);
@@ -117,10 +119,17 @@ export class WebSocketService {
   }
 
   private handleClose() {
-    console.log('WebSocket closed, attempting to reconnect...');
     const store = useCenterStore();
     store.setBrowserConnection('disconnected');
+    store.setPluginConnection('disconnected');
 
+    if (this.isExplicitDisconnect) {
+      console.log('WebSocket connection closed explicitly');
+      this.reconnectAttempts = 0;
+      return;
+    }
+
+    console.log('WebSocket closed, attempting to reconnect...');
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       setTimeout(() => this.connect(), 1000 * this.reconnectAttempts);
@@ -164,6 +173,7 @@ export class WebSocketService {
 
   disconnect() {
     if (this.ws) {
+      this.isExplicitDisconnect = true;
       this.ws.close();
       this.ws = null;
     }

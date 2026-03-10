@@ -48,7 +48,7 @@ Plugin (硬件按钮)
   → receive state-update messages (实时同步状态)
 
 Extension (Google Meet 控制)
-  → register as 'extension'
+  → register as 'browser-extension'
   → receive command messages (执行控制)
   → send state-update messages (同步状态)
 ```
@@ -202,14 +202,14 @@ type MeetDeviceStatus = {
 };
 
 // 客户端角色
-type ClientRole = 'center' | 'plugin' | 'extension';
+type ClientRole = 'center' | 'plugin' | 'browser-extension';
 ```
 
 **角色说明：**
 
 - `'center'` - MeetKey Center UI（自动注册）
 - `'plugin'` - Stream Deck 硬件插件
-- `'extension'` - Browser Extension（Google Meet）
+- `'browser-extension'` - Browser Extension（Google Meet）
 
 ---
 
@@ -313,7 +313,7 @@ pnpm dev
 ```bash
 websocat ws://127.0.0.1:8080
 # 注册为 extension
-{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"extension"}}
+{"id":"ext-1","type":"register","timestamp":1234567890,"payload":{"role":"browser-extension"}}
 
 # 发送状态更新
 {"id":"state-1","type":"state-update","timestamp":1234567891,"payload":{"microphone":"on","camera":"on","last_updated":1234567891}}

@@ -3,18 +3,21 @@
  */
 
 // 客户端角色
-export type ClientRole = 'plugin' | 'extension';
+export type ClientRole = 'plugin' | 'browser-extension' | 'center';
 
 // 基础消息类型
 export type MessageType =
   | 'register'
   | 'command'
+  | 'action'
   | 'state-update'
   | 'state-query'
   | 'state-response'
   | 'error'
   | 'ping'
-  | 'pong';
+  | 'pong'
+  | `${ClientRole}-connected`
+  | `${ClientRole}-disconnected`;
 
 export interface WebSocketMessage {
   id: string;
@@ -28,6 +31,15 @@ export interface RegisterMessage extends WebSocketMessage {
   type: 'register';
   payload: {
     role: ClientRole;
+  };
+}
+
+// Action Message - 客户端发送通用动作
+export interface ActionMessage extends WebSocketMessage {
+  type: 'action';
+  payload: {
+    action: string;
+    params?: Record<string, unknown>;
   };
 }
 
@@ -60,18 +72,13 @@ export interface StateUpdateMessage extends WebSocketMessage {
 // State Query Message - Plugin 或其他客户端查询当前状态
 export interface StateQueryMessage extends WebSocketMessage {
   type: 'state-query';
-  payload: {
-    requestId: string;
-  };
+  payload?: null;
 }
 
 // State Response Message - Service 回复当前状态
 export interface StateResponseMessage extends WebSocketMessage {
   type: 'state-response';
-  payload: {
-    requestId: string;
-    state: MeetDeviceStatus;
-  };
+  payload: MeetDeviceStatus;
 }
 
 // Error Message

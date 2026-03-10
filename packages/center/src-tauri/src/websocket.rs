@@ -83,6 +83,7 @@ async fn handle_connection(
     let (mut write, mut read) = ws_stream.split();
 
     let mut broadcast_rx = broadcast_tx.subscribe();
+    let mut registered_role: Option<String> = None;
 
     loop {
         tokio::select! {
@@ -107,9 +108,9 @@ async fn handle_connection(
                                         eprintln!("🔍 DEBUG: Payload found: {:?}", payload);
                                         if let Some(role) = payload.get("role").and_then(|r| r.as_str()) {
                                             println!("✅ Client registered as: {}", role);
+                                            registered_role = Some(role.to_string());
 
-                                            if role != "center" {
-                                                // Send confirmation back to client
+                                            // Send confirmation back to client
                                             let confirmation = WebSocketMessage {
                                                 id: format!("{}-confirm", message.id),
                                                 msg_type: format!("{}-connected", role),
@@ -121,26 +122,26 @@ async fn handle_connection(
                                             };
                                             println!("📤 Sending confirmation: {}", confirmation.msg_type);
                                             let confirm_json = serde_json::to_string(&confirmation).unwrap();
-                                            eprintln!("🔍 DEBUG: Sending JSON: {}", confirm_json);
+
                                             match write.send(tungstenite::Message::Text(confirm_json)).await {
-                                                Ok(_) => eprintln!("✅ DEBUG: Confirmation sent successfully"),
-                                                Err(e) => eprintln!("❌ DEBUG: Failed to send confirmation: {}", e),
+                                                Ok(_) => println!("✅ Confirmation sent to {}", role),
+                                                Err(e) => eprintln!("❌ Failed to send confirmation to {}: {}", role, e),
                                             }
 
-                                            // Also broadcast to all other clients so they know this role connected
-                                            let broadcast_msg = WebSocketMessage {
-                                                id: format!("{}-broadcast", message.id),
-                                                msg_type: format!("{}-connected", role),
-                                                timestamp: std::time::SystemTime::now()
-                                                    .duration_since(std::time::UNIX_EPOCH)
-                                                    .unwrap()
-                                                    .as_millis() as u64,
-                                                payload: Some(serde_json::json!({ "status": "registered" })),
-                                            };
-                                            println!("📢 Broadcasting: {}", broadcast_msg.msg_type);
-                                            let _ = broadcast_tx.send(broadcast_msg);
-                                            } else {
-                                                println!("🎛️ Center UI connected");
+                                            // Broadcast connection event to all subscribers (including the sender)
+                                            // Clients should filter messages by ID or role if self-handling is not desired.
+                                            if role != "center" {
+                                                let broadcast_msg = WebSocketMessage {
+                                                    id: format!("{}-broadcast", message.id),
+                                                    msg_type: format!("{}-connected", role),
+                                                    timestamp: std::time::SystemTime::now()
+                                                        .duration_since(std::time::UNIX_EPOCH)
+                                                        .unwrap()
+                                                        .as_millis() as u64,
+                                                    payload: Some(serde_json::json!({ "status": "registered" })),
+                                                };
+                                                println!("📢 Broadcasting: {}", broadcast_msg.msg_type);
+                                                let _ = broadcast_tx.send(broadcast_msg);
                                             }
                                         }
                                     }
@@ -212,6 +213,30 @@ async fn handle_connection(
                     let _ = write.send(tungstenite::Message::Text(text)).await;
                 }
             }
+        }
+    }
+
+    // Broadcast disconnection if registered
+    if let Some(role) = registered_role {
+        if role != "center" {
+            let disconnect_msg = WebSocketMessage {
+                id: format!(
+                    "{}-disconnect-{}",
+                    role,
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                ),
+                msg_type: format!("{}-disconnected", role),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64,
+                payload: Some(serde_json::json!({ "status": "disconnected" })),
+            };
+            println!("📢 Broadcasting disconnection: {}", disconnect_msg.msg_type);
+            let _ = broadcast_tx.send(disconnect_msg);
         }
     }
 
