@@ -24,11 +24,32 @@ async function isPortInUse(port: number): Promise<boolean> {
         tester.destroy();
         resolve(true);
       })
-      .once('error', (err: any) => {
+      .once('error', () => {
         tester.destroy();
         resolve(false);
       });
   });
+}
+
+/**
+ * 启动并监控进程
+ */
+function spawnAndMonitor(
+  command: string,
+  args: string[],
+  options: any
+): { process: ChildProcess; state: { hasExited: boolean } } {
+  const state = { hasExited: false };
+  const proc = spawn(command, args, options);
+
+  proc.on('exit', (code) => {
+    state.hasExited = true;
+    if (code !== null && code !== 0) {
+      console.error(`❌ Process (${command}) exited prematurely with code ${code}`);
+    }
+  });
+
+  return { process: proc, state };
 }
 
 /**
@@ -39,45 +60,36 @@ export default async function () {
 
   if (isServerRunning) {
     console.log('🌐 Server is already running on port 8080, skipping spawn.');
-    // 如果服务器已经运行，我们不返回 teardown，这样就不会意外杀掉用户的开发环境进程
     return;
   }
 
   console.log('🚀 Starting WebSocket server for E2E tests...');
 
-  // 启动服务器
-  serverProcess = spawn(BINARY_PATH, [], {
-    stdio: 'ignore', // 忽略输出，避免干扰测试结果
+  let monitor = spawnAndMonitor(BINARY_PATH, [], {
+    stdio: 'ignore',
     env: { ...process.env, TAURI_DEBUG: '1' },
   });
-
-  // 监控进程退出，实现快速失败
-  let hasExited = false;
-  serverProcess.on('exit', (code) => {
-    hasExited = true;
-    if (code !== null && code !== 0) {
-      console.error(`❌ Server process exited prematurely with code ${code}`);
-    }
-  });
+  serverProcess = monitor.process;
 
   serverProcess.on('error', (err) => {
     console.warn('⚠️  Failed to start server process binary, attempting "cargo run":', err.message);
     // 如果二进制不存在，尝试 fallback 到 cargo run
-    serverProcess = spawn('cargo', ['run', '--quiet'], {
+    monitor = spawnAndMonitor('cargo', ['run', '--quiet'], {
       cwd: path.resolve(ROOT_DIR, 'packages/center/src-tauri'),
       stdio: 'ignore',
     });
+    serverProcess = monitor.process;
   });
 
   // 等待端口就绪
   try {
     await waitOn({
       resources: [`tcp:127.0.0.1:${PORT}`],
-      timeout: 30000, // 增加到 30 秒，适配慢速构建环境
-      simultaneousInterval: 100, // 检查频率
+      timeout: 45000, // 增加到 45 秒，cargo run 可能很慢
+      interval: 200,
     });
 
-    if (hasExited) {
+    if (monitor.state.hasExited) {
       throw new Error('Server process exited before port became ready');
     }
 
