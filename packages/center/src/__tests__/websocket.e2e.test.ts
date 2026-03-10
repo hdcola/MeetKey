@@ -1,10 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import WebSocket from 'ws';
 
-// 在 Node 环境中模拟浏览器的 WebSocket
-if (typeof global.WebSocket === 'undefined') {
-  (global as any).WebSocket = WebSocket;
-}
+// 在 Node 环境中模拟浏览器的 WebSocket（始终使用 ws 实现）
+(global as any).WebSocket = WebSocket;
 
 const WS_URL = 'ws://127.0.0.1:8080';
 const DEFAULT_TIMEOUT = 5000;

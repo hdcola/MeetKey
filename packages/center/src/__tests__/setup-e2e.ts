@@ -10,7 +10,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, '../../../../');
 const PORT = 8080;
 // 优先使用编译好的二进制，如果没有则尝试使用 cargo run
-const BINARY_PATH = path.resolve(ROOT_DIR, 'packages/center/src-tauri/target/debug/meetkey-center');
+const BINARY_NAME = process.platform === 'win32' ? 'meetkey-center.exe' : 'meetkey-center';
+const BINARY_PATH = path.resolve(ROOT_DIR, 'packages/center/src-tauri/target/debug', BINARY_NAME);
 
 /**
  * 检查端口是否被占用 (true = 占用, false = 空闲)
@@ -50,6 +51,15 @@ export default async function () {
     env: { ...process.env, TAURI_DEBUG: '1' },
   });
 
+  // 监控进程退出，实现快速失败
+  let hasExited = false;
+  serverProcess.on('exit', (code) => {
+    hasExited = true;
+    if (code !== null && code !== 0) {
+      console.error(`❌ Server process exited prematurely with code ${code}`);
+    }
+  });
+
   serverProcess.on('error', (err) => {
     console.warn('⚠️  Failed to start server process binary, attempting "cargo run":', err.message);
     // 如果二进制不存在，尝试 fallback 到 cargo run
@@ -64,7 +74,13 @@ export default async function () {
     await waitOn({
       resources: [`tcp:127.0.0.1:${PORT}`],
       timeout: 30000, // 增加到 30 秒，适配慢速构建环境
+      simultaneousInterval: 100, // 检查频率
     });
+
+    if (hasExited) {
+      throw new Error('Server process exited before port became ready');
+    }
+
     console.log('✅ Server is ready at 127.0.0.1:8080');
   } catch (err) {
     console.error('❌ Server failed to start or port 8080 is blocked');
